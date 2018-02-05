@@ -1,5 +1,11 @@
 package proto
 
+import (
+	"unicode/utf8"
+
+	"bytes"
+)
+
 // Based on http://9p.io/sources/plan9/sys/include/fcall.h
 const (
 	msgTversion = iota + 100 // size[4] Tversion tag[2] msize[4] version[s]
@@ -61,4 +67,93 @@ var minSizeLUT = [28]uint32{
 	11 + fixedStatLen, // size[4] Rstat tag[2] stat[n]
 	15 + fixedStatLen, // size[4] Twstat tag[2] fid[4] stat[n]
 	7,                 // size[4] Rwstat tag[2]
+}
+
+var minSizeLUT64 [28]int64
+
+func init() {
+	for i, s := range minSizeLUT {
+		minSizeLUT64[i] = int64(s)
+	}
+}
+
+const (
+	errElemInvalidUTF8 = Error("path element name is not valid utf8")
+	errMaxNames        = Error("maximum walk elements exceeded")
+	errElemTooLarge    = Error("path element name too large")
+	errPathTooLarge    = Error("file tree name too large")
+	errPathName        = Error("separator in path element")
+
+	errUnameInvalidUTF8   = Error("username is not valid utf8")
+	errUnameTooLarge      = Error("username is too large")
+	errVersionInvalidUTF8 = Error("version is not valid utf8")
+	errVersionTooLarge    = Error("version is too large")
+
+	errDataTooLarge = Error("maximum data bytes exeeded")
+
+	errMaxName = Error("maximum walk elements exceeded")
+
+	errInvalidMessageType = Error("invalid message type")
+	errMessageTooLarge    = Error("message too large")
+	errMessageTooSmall    = Error("message too small")
+)
+
+var separator = []byte("/")
+
+const separatorByte = '/'
+
+func verifyUname(uname []byte) error {
+	if len(uname) > maxUnameLen {
+		return errUnameTooLarge
+	}
+	if !utf8.Valid(uname) {
+		return errUnameInvalidUTF8
+	}
+	return nil
+}
+
+func verifyVersion(version []byte) error {
+	if len(version) > maxVersionLen {
+		return errVersionTooLarge
+	}
+	if !utf8.Valid(version) {
+		return errVersionInvalidUTF8
+	}
+	return nil
+}
+
+func verifyName(name []byte) error {
+	if len(name) > maxNameLen {
+		return errElemTooLarge
+	}
+	if !utf8.Valid(name) {
+		return errElemInvalidUTF8
+	}
+	if bytes.Contains(name, separator) {
+		return errPathName
+	}
+	return nil
+}
+
+func verifyPath(name []byte) (err error) {
+	for len(name) > 0 && name[0] == separatorByte {
+		name = name[1:]
+	}
+	if len(name) == 0 {
+		return nil
+	}
+	if len(name) > maxPathLen {
+		return errPathTooLarge
+	}
+	if bytes.Count(name, separator) > maxName {
+		return errMaxNames
+	}
+
+	elems := bytes.Split(name, separator)
+	for _, elem := range elems {
+		if err = verifyName(elem); err != nil {
+			return err
+		}
+	}
+	return nil
 }

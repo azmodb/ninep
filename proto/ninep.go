@@ -8,9 +8,28 @@ import (
 // Defines some limits on how big some arbitrarily-long 9P2000 fields can
 // be.
 const (
+	// maxVersionLen is the length (in bytes) of a version identiefier.
+	maxVersionLen = 64
+
+	// maxUnameLen is the maximum length (in bytes) of a username or
+	// group identifier.
+	maxUnameLen = 255
+
+	// maxNameLen is the maximum length of a file name in bytes.
+	maxNameLen = 255
+
+	// maxName is the maximum allowed number of path elements in a
+	// Twalk request.
+	maxName = 16
+
+	maxPathLen = maxName + maxName*maxNameLen // 4096 bytes
+
 	// size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 	// size[4] Tread  tag[2] fid[4] offset[8] count[4]
 	fixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
+
+	maxMessageLen = (fixedReadWriteLen + 1) + maxDataLen
+	maxDataLen    = (1<<31 - 1) - (fixedReadWriteLen + 1) // ~ 2GB
 
 	fixedStatLen = 2 + 4 + 13 + 4 + 4 + 4 + 8 + 4*2 // 47
 )
@@ -59,6 +78,23 @@ const (
 	QTTMP    = 0x04 // non-backed-up file
 	QTFILE   = 0x00
 )
+
+// Message represents a 9P2000 message and is used to access fields common
+// to all 9P2000 messages.
+type Message interface {
+	// Len returns the four byte size field specifying the length in bytes
+	// of the complete message including the four bytes of the size field
+	// itself.
+	Len() int64
+
+	// Tag returns the field choosen by the client to identify the
+	// message.
+	Tag() uint16
+
+	Reset()
+
+	String() string
+}
 
 // Qid represents the server's unique identification for the file being
 // accessed. Two files on the same server hierarchy are the same if and
@@ -171,6 +207,6 @@ func (s Stat) String() string {
 }
 
 // Error represents a 9P2000 protocol error.
-//type Error string
-//
-//func (e Error) Error() string { return string(e) }
+type Error string
+
+func (e Error) Error() string { return string(e) }
