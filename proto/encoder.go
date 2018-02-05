@@ -65,6 +65,9 @@ func NewEncoder(w io.Writer, opts ...EncoderOption) Encoder {
 
 func newEncoder(w io.Writer, opts ...EncoderOption) *encoder {
 	e := &encoder{}
+	for _, opt := range opts {
+		opt(e)
+	}
 	e.reset(w, defBufSize)
 	return e
 }
