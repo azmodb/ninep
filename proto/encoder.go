@@ -45,8 +45,11 @@ type Encoder interface {
 	Rerrorf(tag uint16, format string, args ...interface{})
 	Rerror(tag uint16, err error)
 
+	Reset(w io.Writer)
 	Flush() error
 }
+
+const defBufSize = 4096
 
 type EncoderOption func(*encoder)
 
@@ -57,12 +60,12 @@ type encoder struct {
 }
 
 func NewEncoder(w io.Writer, opts ...EncoderOption) Encoder {
-	return newEncoder(w)
+	return newEncoder(w, opts...)
 }
 
 func newEncoder(w io.Writer, opts ...EncoderOption) *encoder {
 	e := &encoder{}
-	e.reset(w, 4096)
+	e.reset(w, defBufSize)
 	return e
 }
 
@@ -70,6 +73,8 @@ func (e *encoder) reset(w io.Writer, size int) {
 	e.w = bufio.NewWriterSize(w, size)
 	e.err = nil
 }
+
+func (e *encoder) Reset(w io.Writer) { e.reset(w, defBufSize) }
 
 func (e *encoder) Tversion(tag uint16, msize uint32, version string) {
 	size := minSizeLUT[msgTversion-100] + uint32(len(version))
