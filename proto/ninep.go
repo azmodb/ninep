@@ -31,6 +31,15 @@ const (
 	maxMessageLen = (fixedReadWriteLen + 1) + maxDataLen
 	maxDataLen    = (1<<31 - 1) - (fixedReadWriteLen + 1) // ~ 2GB
 
+	headerLen = 7 // size[4] type[1] tag[2]
+
+	// To make the contents of a directory, such as returned by read(5),
+	// easy to parse, each directory entry begins with a size field.
+	// For consistency, the entries in Twstat and Rstat messages also
+	// contain their size, which means the size appears twice.
+	//
+	// 	http://9p.io/magic/man2html/5/stat
+	//
 	fixedStatLen = 2 + 4 + 13 + 4 + 4 + 4 + 8 + 4*2 // 47
 )
 

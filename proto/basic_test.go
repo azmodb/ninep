@@ -102,12 +102,10 @@ var testFcalls = []plan9.Fcall{
 	plan9.Fcall{Type: plan9.Rremove, Tag: 42},
 
 	plan9.Fcall{Type: plan9.Tstat, Tag: 42, Fid: 42},
-	//plan9.Fcall{Type: plan9.Rstat, Tag: 42, Stat: testDirBytes},
-	//plan9.Fcall{Type: plan9.Rstat, Tag: NOTAG, Stat: testMaxDirBytes},
-	/*
-		plan9.Fcall{Type: plan9.Twstat, Tag: 42, Fid: 42, Stat: testDirBytes},
-		plan9.Fcall{Type: plan9.Twstat, Tag: NOTAG, Fid: NOFID, Stat: testMaxDirBytes},
-	*/
+	plan9.Fcall{Type: plan9.Rstat, Tag: 42, Stat: testDirBytes},
+	plan9.Fcall{Type: plan9.Rstat, Tag: NOTAG, Stat: testMaxDirBytes},
+	plan9.Fcall{Type: plan9.Twstat, Tag: 42, Fid: 42, Stat: testDirBytes},
+	plan9.Fcall{Type: plan9.Twstat, Tag: NOTAG, Fid: NOFID, Stat: testMaxDirBytes},
 	plan9.Fcall{Type: plan9.Rwstat, Tag: 42},
 
 	plan9.Fcall{Type: plan9.Rerror, Ename: "error message"},
@@ -456,6 +454,23 @@ func TestDecoderBasicCompatiblity(t *testing.T) {
 		case Tremove:
 			if m.Fid() != f.Fid {
 				t.Fatalf("basic dec test[#%d]: expected fid %d, got %d", i, f.Fid, m.Fid())
+			}
+		case Tstat:
+			if m.Fid() != f.Fid {
+				t.Fatalf("basic dec test[#%d]: expected fid %d, got %d", i, f.Fid, m.Fid())
+			}
+		case Rstat:
+			if !reflect.DeepEqual(m.Stat(), plan9StatToStat(f.Stat)) {
+				dir, _ := plan9.UnmarshalDir(f.Stat)
+				t.Fatalf("basic dec test[#%d]: stat differ\nwant %q\nhave %q", i, dir, m.Stat())
+			}
+		case Twstat:
+			if m.Fid() != f.Fid {
+				t.Fatalf("basic dec test[#%d]: expected fid %d, got %d", i, f.Fid, m.Fid())
+			}
+			if !reflect.DeepEqual(m.Stat(), plan9StatToStat(f.Stat)) {
+				dir, _ := plan9.UnmarshalDir(f.Stat)
+				t.Fatalf("basic dec test[#%d]: stat differ\nwant %q\nhave %q", i, dir, m.Stat())
 			}
 		case Rerror:
 			if m.Ename() != f.Ename {

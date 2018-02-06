@@ -416,16 +416,17 @@ func (m Tstat) String() string {
 type Rstat []byte
 
 func parseRstat(data []byte) (Rstat, error) {
-	if err := vfield(data, 48, 0, verifyName); err != nil {
+	n := headerLen + 2 + 2 + fixedStatLen - (2 * 4)
+	if err := vfield(data, n, 0, verifyName); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 48, 1, verifyUname); err != nil {
+	if err := vfield(data, n, 1, verifyUname); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 48, 2, verifyUname); err != nil {
+	if err := vfield(data, n, 2, verifyUname); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 48, 3, verifyUname); err != nil {
+	if err := vfield(data, n, 3, verifyUname); err != nil {
 		return nil, err
 	}
 	return Rstat(data), nil
@@ -433,7 +434,7 @@ func parseRstat(data []byte) (Rstat, error) {
 
 func (m Rstat) Stat() Stat {
 	stat := Stat{}
-	stat.UnmarshalBinary(m[7:])
+	stat.UnmarshalBinary(m[9:])
 	return stat
 }
 
@@ -447,16 +448,17 @@ func (m Rstat) String() string {
 type Twstat []byte
 
 func parseTwstat(data []byte) (Twstat, error) {
-	if err := vfield(data, 52, 0, verifyName); err != nil {
+	n := headerLen + 4 + 2 + 2 + fixedStatLen - (2 * 4)
+	if err := vfield(data, n, 0, verifyName); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 52, 1, verifyUname); err != nil {
+	if err := vfield(data, n, 1, verifyUname); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 52, 2, verifyUname); err != nil {
+	if err := vfield(data, n, 2, verifyUname); err != nil {
 		return nil, err
 	}
-	if err := vfield(data, 52, 3, verifyUname); err != nil {
+	if err := vfield(data, n, 3, verifyUname); err != nil {
 		return nil, err
 	}
 	return Twstat(data), nil
@@ -465,7 +467,7 @@ func parseTwstat(data []byte) (Twstat, error) {
 func (m Twstat) Fid() uint32 { return guint32(m[7:11]) }
 func (m Twstat) Stat() Stat {
 	stat := Stat{}
-	stat.UnmarshalBinary(m[11:])
+	stat.UnmarshalBinary(m[13:])
 	return stat
 }
 

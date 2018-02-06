@@ -22,8 +22,6 @@ type Decoder interface {
 
 type DecoderOption func(*decoder)
 
-const headerLen = 7
-
 type decoder struct {
 	r   *bufio.Reader // stream reader
 	err error
