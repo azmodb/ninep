@@ -28,6 +28,10 @@ const (
 	// size[4] Tread  tag[2] fid[4] offset[8] count[4]
 	fixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
 
+	defaultMaxMessageLen = (fixedReadWriteLen + 1) + defaultMaxDataLen
+
+	defaultMaxDataLen = 2 * 1024 * 1024
+
 	maxMessageLen = (fixedReadWriteLen + 1) + maxDataLen
 	maxDataLen    = (1<<31 - 1) - (fixedReadWriteLen + 1) // ~ 2GB
 

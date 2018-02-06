@@ -36,7 +36,10 @@ func NewDecoder(r io.Reader, opts ...DecoderOption) Decoder {
 }
 
 func newDecoder(r io.Reader, opts ...DecoderOption) *decoder {
-	d := &decoder{}
+	d := &decoder{
+		maxSize:  defaultMaxMessageLen,
+		dataSize: defaultMaxDataLen,
+	}
 	for _, opt := range opts {
 		opt(d)
 	}
@@ -59,7 +62,7 @@ func (d *decoder) Decode() (Message, error) {
 	if size < headerLen {
 		return nil, errMessageTooSmall
 	}
-	if d.maxSize > 0 && size > d.maxSize {
+	if size > d.maxSize {
 		return nil, errMessageTooLarge
 	}
 
