@@ -98,6 +98,14 @@ const (
 	errMessageTooSmall    = Error("message too small")
 )
 
+// Logger represents an active logging object that generates lines of
+// output.
+type Logger interface {
+	// Printf formats according to a format specifier and should write
+	// to standard error.
+	Printf(format string, args ...interface{})
+}
+
 var separator = []byte("/")
 
 const separatorByte = '/'

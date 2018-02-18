@@ -45,26 +45,36 @@ type Encoder interface {
 	Rerrorf(tag uint16, format string, args ...interface{})
 	Rerror(tag uint16, err error)
 
+	SetMaxMessageSize(size uint32)
+	MaxMessageSize() uint32
+
 	Reset(w io.Writer)
 	Flush() error
 }
 
 const defBufSize = 4096
 
-type EncoderOption func(*encoder)
-
 type encoder struct {
 	w   *bufio.Writer
 	err error
 	buf [20]byte
+
+	maxSize  int64
+	dataSize int64
+
+	logger Logger
 }
 
-func NewEncoder(w io.Writer, opts ...EncoderOption) Encoder {
+// NewEncoder returns a new encoder that will transmit on the io.Writer.
+func NewEncoder(w io.Writer, opts ...Option) Encoder {
 	return newEncoder(w, opts...)
 }
 
-func newEncoder(w io.Writer, opts ...EncoderOption) *encoder {
-	e := &encoder{}
+func newEncoder(w io.Writer, opts ...Option) *encoder {
+	e := &encoder{
+		maxSize:  defaultMaxMessageLen, // TODO: unused
+		dataSize: defaultMaxDataLen,    // TODO: unused
+	}
 	for _, opt := range opts {
 		opt(e)
 	}
@@ -78,6 +88,14 @@ func (e *encoder) reset(w io.Writer, size int) {
 }
 
 func (e *encoder) Reset(w io.Writer) { e.reset(w, defBufSize) }
+
+func (e *encoder) SetMaxMessageSize(size uint32) {
+	e.maxSize = int64(size)
+}
+
+func (e *encoder) MaxMessageSize() uint32 {
+	return uint32(e.maxSize)
+}
 
 func (e *encoder) Tversion(tag uint16, msize uint32, version string) {
 	size := minSizeLUT[msgTversion-100] + uint32(len(version))
@@ -401,5 +419,7 @@ func (e *encoder) Flush() error {
 }
 
 func (e *encoder) printf(format string, args ...interface{}) {
-	//	log.Printf(format, args...)
+	if e.logger != nil {
+		e.logger.Printf(format, args...)
+	}
 }

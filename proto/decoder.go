@@ -18,9 +18,49 @@ import (
 type Decoder interface {
 	Decode() (Message, error)
 	Reset(r io.Reader)
+	SetMaxMessageSize(size uint32)
+	MaxMessageSize() uint32
 }
 
-type DecoderOption func(*decoder)
+type Option func(interface{})
+
+func maxSize(size uint32) (msg int64, data int64) {
+	msg = int64(size)
+	if msg < fixedReadWriteLen+1 {
+		msg = fixedReadWriteLen + 1
+	}
+	if msg > maxMessageLen {
+		msg = maxMessageLen
+	}
+	data = msg - (fixedReadWriteLen + 1)
+	return msg, data
+}
+
+func WithMaxMessageSize(size uint32) Option {
+	return func(v interface{}) {
+		switch t := v.(type) {
+		case *encoder:
+			t.maxSize, t.dataSize = maxSize(size)
+		case *decoder:
+			t.maxSize, t.dataSize = maxSize(size)
+		}
+	}
+}
+
+func WithLogger(logger Logger) Option {
+	return func(v interface{}) {
+		if logger == nil {
+			return
+		}
+
+		switch t := v.(type) {
+		case *encoder:
+			t.logger = logger
+		case *decoder:
+			t.logger = logger
+		}
+	}
+}
 
 type decoder struct {
 	r   *bufio.Reader // stream reader
@@ -29,13 +69,16 @@ type decoder struct {
 
 	maxSize  int64
 	dataSize int64
+
+	logger Logger
 }
 
-func NewDecoder(r io.Reader, opts ...DecoderOption) Decoder {
+// NewDecoder returns a new decoder that reads from the io.Reader.
+func NewDecoder(r io.Reader, opts ...Option) Decoder {
 	return newDecoder(r, opts...)
 }
 
-func newDecoder(r io.Reader, opts ...DecoderOption) *decoder {
+func newDecoder(r io.Reader, opts ...Option) *decoder {
 	d := &decoder{
 		maxSize:  defaultMaxMessageLen,
 		dataSize: defaultMaxDataLen,
@@ -53,6 +96,14 @@ func (d *decoder) reset(r io.Reader, size int) {
 }
 
 func (d *decoder) Reset(r io.Reader) { d.reset(r, defBufSize) }
+
+func (d *decoder) SetMaxMessageSize(size uint32) {
+	d.maxSize = int64(size)
+}
+
+func (d *decoder) MaxMessageSize() uint32 {
+	return uint32(d.maxSize)
+}
 
 func (d *decoder) Decode() (Message, error) {
 	if err := d.readFull(d.buf[:headerLen]); err != nil {
@@ -149,7 +200,14 @@ func (d *decoder) parse(typ uint8, data []byte) (m Message, err error) {
 		m.Reset()
 		return nil, err
 	}
+	d.printf("-> %s", m)
 	return m, err
+}
+
+func (d *decoder) printf(format string, args ...interface{}) {
+	if d.logger != nil {
+		d.logger.Printf(format, args...)
+	}
 }
 
 func (d *decoder) readFull(buf []byte) error {
