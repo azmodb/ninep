@@ -49,6 +49,7 @@ type Encoder interface {
 	MaxMessageSize() uint32
 
 	Reset(w io.Writer)
+	Err() error
 	Flush() error
 }
 
@@ -88,6 +89,8 @@ func (e *encoder) reset(w io.Writer, size int) {
 }
 
 func (e *encoder) Reset(w io.Writer) { e.reset(w, defBufSize) }
+
+func (e *encoder) Err() error { return e.err }
 
 func (e *encoder) SetMaxMessageSize(size uint32) {
 	e.maxSize = int64(size)
