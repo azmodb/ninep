@@ -2,14 +2,13 @@ package ninep
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"net"
 	"sync"
 
 	"github.com/azmodb/ninep/proto"
 )
 
+/*
 type session struct {
 	writer sync.Mutex // exclusive connection writer
 	enc    proto.Encoder
@@ -110,7 +109,7 @@ func (s *session) Serve() error {
 	return nil
 }
 
-const protoVersion = "9P2000"
+//const protoVersion = "9P2000"
 
 func (s *session) handshake(m proto.Tversion) error {
 	version := m.Version()
@@ -145,14 +144,15 @@ func (s *session) rerror(tag uint16, err error) {
 	s.enc.Flush()
 	s.writer.Unlock()
 }
+*/
 
 type Server struct {
-	mu         sync.Mutex // protects following
-	pending    map[int64]*session
-	freeid     map[int64]struct{}
-	session    int64
-	maxSession int64
-	shutdown   bool
+	mu       sync.Mutex // protects following
+	pending  map[int64]*conn
+	freeid   map[int64]struct{}
+	openConn int64
+	maxConn  int64
+	shutdown bool
 
 	msize uint32
 	log   proto.Logger
@@ -162,16 +162,17 @@ type Server struct {
 
 func NewServer(log proto.Logger) (*Server, error) {
 	return &Server{
-		pending:    make(map[int64]*session),
-		freeid:     make(map[int64]struct{}),
-		session:    1,
-		maxSession: 1<<63 - 1,
-		msize:      24 + 2*1024*1024,
+		freeid:   make(map[int64]struct{}),
+		pending:  make(map[int64]*conn),
+		openConn: 1,
+		maxConn:  1<<63 - 1,
+
+		msize: 24 + 2*1024*1024,
 		//log:        log,
 	}, nil
 }
 
-func (s *Server) addSession(sess *session) (int64, error) {
+func (s *Server) addConn(c *conn) (int64, error) {
 	s.mu.Lock()
 	if s.shutdown {
 		s.mu.Unlock()
@@ -183,26 +184,27 @@ func (s *Server) addSession(sess *session) (int64, error) {
 		delete(s.freeid, id)
 	}
 	if id == 0 {
-		id = s.session
+		id = s.openConn
 	}
-	if id >= s.maxSession {
+	if id >= s.maxConn {
 		s.mu.Unlock()
-		return 0, errors.New("too many open sessions")
+		return 0, errors.New("too many connections")
 	}
 
-	s.pending[id] = sess
-	s.session++
+	s.pending[id] = c
+	s.openConn++
 	s.mu.Unlock()
 	return id, nil
 }
 
-func (s *Server) delSession(id int64) {
+func (s *Server) deleteConn(id int64) {
 	s.mu.Lock()
 	delete(s.pending, id)
 	s.freeid[id] = struct{}{}
 	s.mu.Unlock()
 }
 
+/*
 func (s *Server) cleanupSessions() {
 	s.mu.Lock()
 	for id, sess := range s.pending {
@@ -212,9 +214,10 @@ func (s *Server) cleanupSessions() {
 	}
 	s.mu.Unlock()
 }
+*/
 
 func (s *Server) Serve(listener net.Listener) error {
-	defer s.cleanupSessions()
+	//defer s.cleanupSessions()
 
 	for {
 		conn, err := listener.Accept()
@@ -223,18 +226,17 @@ func (s *Server) Serve(listener net.Listener) error {
 		}
 
 		go func(conn net.Conn) {
-			sess := newSession(conn, s.msize, s.log)
-			defer sess.Close()
+			c := newConn(conn, s.msize, s.log)
+			defer c.Close()
 
-			id, err := s.addSession(sess)
+			id, err := s.addConn(c)
 			if err != nil {
-				return
+				return // TODO: log
 			}
-
-			if err = sess.Serve(); err != nil {
+			if err = c.Serve(); err != nil {
 				s.printf("session[%d] error: %v", id, err)
 			}
-			s.delSession(id)
+			s.deleteConn(id)
 		}(conn)
 	}
 }
