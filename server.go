@@ -111,9 +111,10 @@ func (s *Server) Serve(listener net.Listener) error {
 				s.printf("conn[%d] error: %v", id, err)
 				return
 			}
-			s.printf("insert conn[%d]", id)
 			if err = c.Serve(); err != nil {
-				s.printf("conn[%d] error: %v", id, err)
+				//if err != io.EOF && err != io.ErrUnexpectedEOF {
+				//	s.printf("conn[%d] error: %v", id, err)
+				//}
 			}
 			s.deleteConn(id)
 		}(conn)
