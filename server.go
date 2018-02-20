@@ -1,6 +1,7 @@
 package ninep
 
 import (
+	"context"
 	"errors"
 	"net"
 	"sync"
@@ -146,14 +147,30 @@ func (s *session) rerror(tag uint16, err error) {
 }
 */
 
+type FileServer interface {
+	Tattach(ctx context.Context, m *Tattach)
+	/*
+	   	Twalk(ctx context.Context, m *Twalk)
+	    Tclunk(ctx context.Context, m *Tclunk)
+	    Tcreate(ctx context.Context, m *Tcreate)
+	    Topen(ctx context.Context, m *Topen)
+	    Tremove(ctx context.Context, m *Tremove)
+	    Tread(ctx context.Context, m *Tread)
+	    Twrite(ctx context.Context, m *Twrite)
+	    Tstat(ctx context.Context, m *Tstat)
+	    Twstat(ctx context.Context, m *Twstat)
+	*/
+}
+
 type Server struct {
 	mu       sync.Mutex // protects following
-	pending  map[int64]*conn
 	freeid   map[int64]struct{}
-	openConn int64
+	pending  map[int64]*conn
+	opened   int64
 	maxConn  int64
 	shutdown bool
 
+	fs    FileServer
 	msize uint32
 	log   proto.Logger
 }
@@ -162,10 +179,9 @@ type Server struct {
 
 func NewServer(log proto.Logger) (*Server, error) {
 	return &Server{
-		freeid:   make(map[int64]struct{}),
-		pending:  make(map[int64]*conn),
-		openConn: 1,
-		maxConn:  1<<63 - 1,
+		freeid:  make(map[int64]struct{}),
+		pending: make(map[int64]*conn),
+		maxConn: 1<<63 - 1, // TODO
 
 		msize: 24 + 2*1024*1024,
 		//log:        log,
@@ -184,7 +200,8 @@ func (s *Server) addConn(c *conn) (int64, error) {
 		delete(s.freeid, id)
 	}
 	if id == 0 {
-		id = s.openConn
+		s.opened++
+		id = s.opened
 	}
 	if id >= s.maxConn {
 		s.mu.Unlock()
@@ -192,32 +209,29 @@ func (s *Server) addConn(c *conn) (int64, error) {
 	}
 
 	s.pending[id] = c
-	s.openConn++
 	s.mu.Unlock()
 	return id, nil
 }
 
 func (s *Server) deleteConn(id int64) {
 	s.mu.Lock()
-	delete(s.pending, id)
 	s.freeid[id] = struct{}{}
+	delete(s.pending, id)
 	s.mu.Unlock()
 }
 
-/*
-func (s *Server) cleanupSessions() {
+func (s *Server) destroyConns() {
 	s.mu.Lock()
-	for id, sess := range s.pending {
+	for id, c := range s.pending {
 		delete(s.pending, id)
 		s.freeid[id] = struct{}{}
-		sess.Close()
+		c.Close()
 	}
 	s.mu.Unlock()
 }
-*/
 
 func (s *Server) Serve(listener net.Listener) error {
-	//defer s.cleanupSessions()
+	defer s.destroyConns()
 
 	for {
 		conn, err := listener.Accept()
@@ -226,15 +240,17 @@ func (s *Server) Serve(listener net.Listener) error {
 		}
 
 		go func(conn net.Conn) {
-			c := newConn(conn, s.msize, s.log)
+			c := newConn(s, conn)
 			defer c.Close()
 
 			id, err := s.addConn(c)
 			if err != nil {
-				return // TODO: log
+				s.printf("conn[%d] error: %v", id, err)
+				return
 			}
+			s.printf("insert conn[%d]", id)
 			if err = c.Serve(); err != nil {
-				s.printf("session[%d] error: %v", id, err)
+				s.printf("conn[%d] error: %v", id, err)
 			}
 			s.deleteConn(id)
 		}(conn)

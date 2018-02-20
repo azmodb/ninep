@@ -2,16 +2,12 @@ package ninep
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"sync"
 
 	"github.com/azmodb/ninep/proto"
 )
-
-type FileServer interface {
-	Tattach(ctx context.Context, m *Tattach) error
-}
 
 type reqcontext struct {
 	parent context.Context
@@ -32,7 +28,7 @@ func (m *Tattach) Uname() string { return m.m.Uname() }
 func (m *Tattach) Aname() string { return m.m.Aname() }
 
 func (m *Tattach) Rattach(qid proto.Qid) {
-	m.c.Rattach(m.m.Tag(), qid)
+	m.c.rattach(m.m.Tag(), qid)
 }
 
 type conn struct {
@@ -41,8 +37,9 @@ type conn struct {
 
 	dec proto.Decoder
 
-	parent context.Context
-	fs     FileServer
+	//	parent context.Context
+	//	fs     FileServer
+	s *Server
 
 	mu       sync.Mutex
 	shutdown bool
@@ -53,19 +50,21 @@ type conn struct {
 	request map[uint16]*reqcontext
 }
 
-func newConn(rwc io.ReadWriteCloser, msize uint32, log proto.Logger) *conn {
+func newConn(s *Server, rwc io.ReadWriteCloser) *conn {
 	return &conn{
 		enc: proto.NewEncoder(
 			rwc,
-			proto.WithMaxMessageSize(msize),
-			proto.WithLogger(log),
+			proto.WithMaxMessageSize(s.msize),
+			proto.WithLogger(s.log),
 		),
 		dec: proto.NewDecoder(
 			rwc,
-			proto.WithMaxMessageSize(msize),
-			proto.WithLogger(log),
+			proto.WithMaxMessageSize(s.msize),
+			proto.WithLogger(s.log),
 		),
-		c: rwc,
+		s:       s,
+		c:       rwc,
+		request: make(map[uint16]*reqcontext),
 	}
 }
 
@@ -84,7 +83,7 @@ func (c *conn) Close() error {
 	return err
 }
 
-func (c *conn) Rerrorf(tag uint16, fmt string, args ...interface{}) {
+func (c *conn) rerrorf(tag uint16, fmt string, args ...interface{}) {
 	c.writer.Lock()
 	if c.enc.Err() != nil {
 		c.writer.Unlock()
@@ -95,7 +94,7 @@ func (c *conn) Rerrorf(tag uint16, fmt string, args ...interface{}) {
 	c.writer.Unlock()
 }
 
-func (c *conn) Rerror(tag uint16, err error) {
+func (c *conn) rerror(tag uint16, err error) {
 	c.writer.Lock()
 	if c.enc.Err() != nil {
 		c.writer.Unlock()
@@ -106,7 +105,7 @@ func (c *conn) Rerror(tag uint16, err error) {
 	c.writer.Unlock()
 }
 
-func (c *conn) Rattach(tag uint16, qid proto.Qid) {
+func (c *conn) rattach(tag uint16, qid proto.Qid) {
 	c.writer.Lock()
 	if c.enc.Err() != nil {
 		c.writer.Unlock()
@@ -139,14 +138,14 @@ func (c *conn) handleTversion(m proto.Tversion) error {
 	return err
 }
 
-func (c *conn) handleTauth(m proto.Tauth) error {
-	return errors.New("authentification not required")
+func (c *conn) handleTauth(m proto.Tauth) {
+	//return errors.New("authentification not required")
 }
 
-func (c *conn) handleTattach(m proto.Tattach) error {
+func (c *conn) handleTattach(m proto.Tattach) {
 	ctx := &reqcontext{
-		uid:    m.Uname(),
-		parent: c.parent,
+		uid: m.Uname(),
+		//parent: c.parent,
 	}
 	c.reqmu.Lock()
 	c.reqs++
@@ -158,7 +157,40 @@ func (c *conn) handleTattach(m proto.Tattach) error {
 		c:          c,
 		m:          m,
 	}
-	return c.fs.Tattach(ctx.parent, tx)
+	c.s.fs.Tattach(ctx.parent, tx)
 }
 
-func (c *conn) Serve() error { return nil }
+func (c *conn) Serve() error {
+	m, err := c.dec.Decode()
+	if err != nil {
+		return err
+	}
+	tx, ok := m.(proto.Tversion)
+	if !ok {
+		c.rerrorf(m.Tag(), "unexpected message (%T)", m)
+		return fmt.Errorf("unexpected message (%T)", m)
+	}
+	if err = c.handleTversion(tx); err != nil {
+		return err
+	}
+
+	for err == nil {
+		m, err := c.dec.Decode()
+		if err != nil {
+			return err
+		}
+
+		switch m := m.(type) {
+		case proto.Tauth:
+			//err = c.handleTauth(m)
+		case proto.Tattach:
+			//err = c.handleTattach(m)
+			c.handleTattach(m)
+		default:
+			c.rerrorf(m.Tag(), "unexpected message (%T)", m)
+			return fmt.Errorf("unexpected message (%T)", m)
+
+		}
+	}
+	return nil
+}
