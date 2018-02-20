@@ -177,14 +177,15 @@ type Server struct {
 
 //type Option func(*Server) error
 
-func NewServer(log proto.Logger) (*Server, error) {
+func NewServer(fs FileServer, log proto.Logger) (*Server, error) {
 	return &Server{
 		freeid:  make(map[int64]struct{}),
 		pending: make(map[int64]*conn),
 		maxConn: 1<<63 - 1, // TODO
 
+		fs:    fs,
 		msize: 24 + 2*1024*1024,
-		//log:        log,
+		log:   log,
 	}, nil
 }
 
