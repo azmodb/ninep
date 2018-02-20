@@ -40,7 +40,7 @@ type rwc struct {
 func (r rwc) Close() error { return nil }
 
 func TestConnectionHandling(t *testing.T) {
-	s, _ := NewServer(nil)
+	s, _ := NewServer(nil, nil)
 	clients := 6
 
 	check := func(npending, nfreeid int) {
