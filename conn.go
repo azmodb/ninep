@@ -1,7 +1,6 @@
 package ninep
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sync"
@@ -9,26 +8,43 @@ import (
 	"github.com/azmodb/ninep/proto"
 )
 
-type reqcontext struct {
-	parent context.Context
-	uid    string
+type ErrorResponder interface {
+	Rerrorf(format string, args ...interface{})
+	Rerror(err error)
 }
 
-func (m *reqcontext) Uid() string { return m.uid }
+type errResponder struct {
+	tag uint16
+	c   *conn
+}
+
+func (r errResponder) Rerrorf(format string, args ...interface{}) {
+	r.c.rerrorf(r.tag, format, args...)
+}
+
+func (r errResponder) Rerror(err error) { r.c.rerror(r.tag, err) }
+
+type session struct {
+	//parent context.Context
+	uid string
+	c   *conn
+}
+
+func (r *session) Uid() string { return r.uid }
 
 type Tattach struct {
-	m proto.Tattach
-	*reqcontext
-	c *conn
+	ErrorResponder
+	*session
+	tag uint16
+
+	Fid      uint32
+	Afid     uint32
+	Username string
+	Root     string
 }
 
-func (m *Tattach) Fid() uint32   { return m.m.Fid() }
-func (m *Tattach) Afid() uint32  { return m.m.Afid() }
-func (m *Tattach) Uname() string { return m.m.Uname() }
-func (m *Tattach) Aname() string { return m.m.Aname() }
-
-func (m *Tattach) Rattach(qid proto.Qid) {
-	m.c.rattach(m.m.Tag(), qid)
+func (r *Tattach) Rattach(qid proto.Qid) {
+	r.c.rattach(r.tag, qid)
 }
 
 type conn struct {
@@ -41,13 +57,13 @@ type conn struct {
 	//	fs     FileServer
 	s *Server
 
-	mu       sync.Mutex
+	mu       sync.Mutex // protects conn state
 	shutdown bool
 	c        io.Closer
 
-	reqmu   sync.Mutex // protects request muxer
-	reqs    uint16
-	request map[uint16]*reqcontext
+	muxer    sync.Mutex // protects request muxer
+	sessions uint16
+	session  map[uint16]*session
 }
 
 func newConn(s *Server, rwc io.ReadWriteCloser) *conn {
@@ -64,7 +80,7 @@ func newConn(s *Server, rwc io.ReadWriteCloser) *conn {
 		),
 		s:       s,
 		c:       rwc,
-		request: make(map[uint16]*reqcontext),
+		session: make(map[uint16]*session),
 	}
 }
 
@@ -143,21 +159,28 @@ func (c *conn) handleTauth(m proto.Tauth) {
 }
 
 func (c *conn) handleTattach(m proto.Tattach) {
-	ctx := &reqcontext{
-		uid: m.Uname(),
-		//parent: c.parent,
-	}
-	c.reqmu.Lock()
-	c.reqs++
-	c.request[c.reqs] = ctx
-	c.reqmu.Unlock()
-
 	tx := &Tattach{
-		reqcontext: ctx,
-		c:          c,
-		m:          m,
+		ErrorResponder: errResponder{tag: m.Tag(), c: c},
+		session: &session{
+			uid: m.Uname(),
+			c:   c,
+			//parent: c.parent,
+		},
+		tag:      m.Tag(),
+		Fid:      m.Fid(),
+		Afid:     m.Afid(),
+		Username: m.Uname(),
+		Root:     m.Aname(),
 	}
-	c.s.fs.Tattach(ctx.parent, tx)
+
+	if ok := c.s.fs.Tattach(nil, tx); !ok {
+		return
+	}
+
+	c.muxer.Lock()
+	c.sessions++
+	c.session[c.sessions] = tx.session
+	c.muxer.Unlock()
 }
 
 func (c *conn) Serve() error {
@@ -188,8 +211,10 @@ func (c *conn) Serve() error {
 			c.handleTattach(m)
 		default:
 			c.rerrorf(m.Tag(), "unexpected message (%T)", m)
-			return fmt.Errorf("unexpected message (%T)", m)
-
+			err = fmt.Errorf("unexpected message (%T)", m)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil

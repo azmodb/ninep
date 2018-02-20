@@ -13,8 +13,9 @@ import (
 
 type compatFileServer struct{}
 
-func (fs compatFileServer) Tattach(ctx context.Context, m *Tattach) {
+func (fs compatFileServer) Tattach(ctx context.Context, m *Tattach) bool {
 	m.Rattach(proto.Qid{Type: proto.QTDIR})
+	return true
 }
 
 const compatAddr = "localhost:5640"

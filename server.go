@@ -148,7 +148,7 @@ func (s *session) rerror(tag uint16, err error) {
 */
 
 type FileServer interface {
-	Tattach(ctx context.Context, m *Tattach)
+	Tattach(ctx context.Context, m *Tattach) bool
 	/*
 	   	Twalk(ctx context.Context, m *Twalk)
 	    Tclunk(ctx context.Context, m *Tclunk)
