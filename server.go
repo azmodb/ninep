@@ -32,23 +32,41 @@ type Server struct {
 	maxConn  int64
 	shutdown bool
 
-	fs    FileServer
-	msize uint32
-	log   proto.Logger
+	fs     FileServer
+	msize  uint32
+	logger proto.Logger
 }
 
-//type Option func(*Server) error
+type Option func(*Server) error
 
-func NewServer(fs FileServer, log proto.Logger) (*Server, error) {
+func WithLogger(logger proto.Logger) Option {
+	return func(s *Server) error {
+		if logger != nil {
+			s.logger = logger
+		}
+		return nil
+	}
+}
+
+func NewServer(fs FileServer, opts ...Option) (*Server, error) {
+	s := newServer(fs)
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
+}
+
+func newServer(fs FileServer) *Server {
 	return &Server{
 		freeid:  make(map[int64]struct{}),
 		pending: make(map[int64]*conn),
 		maxConn: 1<<63 - 1, // TODO
-
-		fs:    fs,
-		msize: 24 + 2*1024*1024,
-		log:   log,
-	}, nil
+		fs:      fs,
+		msize:   24 + 2*1024*1024, // TODO
+	}
 }
 
 func (s *Server) addConn(c *conn) (int64, error) {
@@ -122,7 +140,7 @@ func (s *Server) Serve(listener net.Listener) error {
 }
 
 func (s *Server) printf(format string, args ...interface{}) {
-	if s.log != nil {
-		s.log.Printf(format, args...)
+	if s.logger != nil {
+		s.logger.Printf(format, args...)
 	}
 }

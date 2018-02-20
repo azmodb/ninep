@@ -28,13 +28,10 @@ func startCompatTestServer(t *testing.T) net.Listener {
 		t.Fatalf("cannot create listener: %v", err)
 	}
 
-	//fs := testFileServer{}
-	//opts := []Option{
-	//	WithLogger(log.New(os.Stderr, "", log.LstdFlags)),
-	//}
-	//s, err := NewServer(fs, opts...)
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	s, err := NewServer(compatFileServer{}, logger)
+	opts := []Option{
+		WithLogger(log.New(os.Stderr, "", log.LstdFlags)),
+	}
+	s, err := NewServer(compatFileServer{}, opts...)
 	if err != nil {
 		t.Fatalf("cannot create server: %v", err)
 	}

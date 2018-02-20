@@ -71,12 +71,12 @@ func newConn(s *Server, rwc io.ReadWriteCloser) *conn {
 		enc: proto.NewEncoder(
 			rwc,
 			proto.WithMaxMessageSize(s.msize),
-			proto.WithLogger(s.log),
+			proto.WithLogger(s.logger),
 		),
 		dec: proto.NewDecoder(
 			rwc,
 			proto.WithMaxMessageSize(s.msize),
-			proto.WithLogger(s.log),
+			proto.WithLogger(s.logger),
 		),
 		s:       s,
 		c:       rwc,
