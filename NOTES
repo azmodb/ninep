@@ -1,0 +1,155 @@
+DOCUMENTATION: https://www.kernel.org/doc/Documentation/filesystems/9p.txt
+
+
+sudo mount -t 9p -n 127.0.0.1 /mnt -oport=5640,version=9p2000.u,aname=/usr/local,access=user
+sudo ls /mnt
+ls /mnt
+sudo umount /mnt
+
+----------- https://github.com/azmodb/ninefs (using unix extension)
+sudo ./ninefs -p 5640 -d
+
+
+
+<<< (0x563743793960) TVERSION tag 65535 msize 8192 version '9P2000.u'
+>>> (0x563743793960) RVERSION tag 65535 msize 8192 version '9P2000.u'
+<<< (0x563743793960) TATTACH tag 1 fid 0 afid -1 uname nobody aname /usr/local
+>>> (0x563743793960) RATTACH tag 1 qid  (00000000000009a9 5a5cf83e 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 0
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TATTACH tag 1 fid 1 afid -1 uname  aname /usr/local
+>>> (0x563743793960) RATTACH tag 1 qid  (00000000000009a9 5a5cf83e 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 1
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TWALK tag 1 fid 1 newfid 2 nwname 0
+>>> (0x563743793960) RWALK tag 1 nwqid 0
+<<< (0x563743793960) TOPEN tag 1 fid 2 mode 0
+>>> (0x563743793960) ROPEN tag 1 (00000000000009a9 5a5cf83e 'd') iounit 0
+<<< (0x563743793960) TSTAT tag 1 fid 1
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TREAD tag 1 fid 2 offset 0 count 8168
+>>> (0x563743793960) RREAD tag 1 count 235 data 50000000 00000000 80a7ef0c 572af000 00000000 00ed0100 80b8f09e 5aa73d0c 
+57d20000 00000000 00090062 6f6f7473 74726170 05006d61 736f6e05 006d6173 
+<<< (0x563743793960) TREAD tag 1 fid 2 offset 235 count 7933
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 2 offset 235 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 2 offset 235 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 1 newfid 2 nwname 1 'bootstrap'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (000000000000f02a 570cefa7 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 1 newfid 2 nwname 1 'bootstrap'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (000000000000f02a 570cefa7 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 3 nwname 0
+>>> (0x563743793960) RWALK tag 1 nwqid 0
+<<< (0x563743793960) TOPEN tag 1 fid 3 mode 0
+>>> (0x563743793960) ROPEN tag 1 (000000000000f02a 570c3da7 'd') iounit 0
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 0 count 8168
+>>> (0x563743793960) RREAD tag 1 count 1200 data 4e000000 00000000 00a1a75e 572bf000 00000000 00a40100 00376741 57a13d0c 
+579a5200 00000000 00070041 5554484f 52530500 6d61736f 6e05006d 61736f6e 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1200 count 6968
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1200 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1200 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TCLUNK tag 1 fid 3
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 1 newfid 2 nwname 1 'go'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (0000000000311a03 59f03cb6 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 1 newfid 2 nwname 1 'go'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (0000000000311a03 59f03cb6 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 3 nwname 0
+>>> (0x563743793960) RWALK tag 1 nwqid 0
+<<< (0x563743793960) TOPEN tag 1 fid 3 mode 0
+>>> (0x563743793960) ROPEN tag 1 (0000000000311a03 59f0dab6 'd') iounit 0
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 0 count 8168
+>>> (0x563743793960) RREAD tag 1 count 1429 data 4e000000 00000000 0027f351 59041a31 00000000 00a40100 00ef6052 5a27d9f0 
+592aa100 00000000 00070041 5554484f 52530500 6d61736f 6e05006d 61736f6e 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1429 count 6739
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1429 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 1429 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TCLUNK tag 1 fid 3
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TATTACH tag 1 fid 2 afid -1 uname  aname /usr/local
+>>> (0x563743793960) RATTACH tag 1 qid  (00000000000009a9 5a5cf83e 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 3 nwname 0
+>>> (0x563743793960) RWALK tag 1 nwqid 0
+<<< (0x563743793960) TOPEN tag 1 fid 3 mode 0
+>>> (0x563743793960) ROPEN tag 1 (00000000000009a9 5a5cf83e 'd') iounit 0
+<<< (0x563743793960) TSTAT tag 1 fid 2
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 0 count 8168
+>>> (0x563743793960) RREAD tag 1 count 235 data 50000000 00000000 80a7ef0c 572af000 00000000 00ed0100 80b8f09e 5aa73d0c 
+57d20000 00000000 00090062 6f6f7473 74726170 05006d61 736f6e05 006d6173 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 235 count 7933
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 235 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 4 nwname 1 'bootstrap'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (000000000000f02a 570cefa7 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'bootstrap' 'mason' 'mason' '' q  (000000000000f02a 570c3da7 'd') m d755 at 1520365752 mt 1460420007 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 4
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 4 nwname 1 'plan9'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (000000000001ce16 59027128 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'plan9' 'mason' 'mason' '' q  (000000000001ce16 5903bf28 'd') m d755 at 1520364102 mt 1493417768 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'plan9' 'mason' 'mason' '' q  (000000000001ce16 5903bf28 'd') m d755 at 1520364102 mt 1493417768 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 4
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TWALK tag 1 fid 2 newfid 4 nwname 1 'go'
+>>> (0x563743793960) RWALK tag 1 nwqid 1 (0000000000311a03 59f03cb6 'd')
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TSTAT tag 1 fid 4
+>>> (0x563743793960) RSTAT tag 1 'go' 'mason' 'mason' '' q  (0000000000311a03 59f0dab6 'd') m d755 at 1520365779 mt 1508956854 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 4
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TREAD tag 1 fid 3 offset 235 count 8168
+>>> (0x563743793960) RREAD tag 1 count 0 data 
+<<< (0x563743793960) TCLUNK tag 1 fid 3
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TSTAT tag 1 fid 1
+>>> (0x563743793960) RSTAT tag 1 'local' 'mason' 'wheel' '' q  (00000000000009a9 5a5cf83e 'd') m d755 at 1520364100 mt 1516042302 l 0 t 0 d 0 ext ''
+<<< (0x563743793960) TCLUNK tag 1 fid 2
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TCLUNK tag 1 fid 1
+>>> (0x563743793960) RCLUNK tag 1
+<<< (0x563743793960) TCLUNK tag 1 fid 0
+>>> (0x563743793960) RCLUNK tag 1
