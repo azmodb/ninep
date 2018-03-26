@@ -47,7 +47,7 @@ func (d *Decoder) Decode(m *Message) error {
 	data := make([]byte, size)
 	copy(data[:headerLen], d.buf[:headerLen])
 	if size > headerLen {
-		if err := d.readFull(data[headerLen:]); err != nil {
+		if err = d.readFull(data[headerLen:]); err != nil {
 			return err
 		}
 	}
