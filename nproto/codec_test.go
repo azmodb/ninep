@@ -136,6 +136,7 @@ func TestMessageEncoding(t *testing.T) {
 		Message{Type: Tremove, Tag: 42, Fid: 42},
 		Message{Type: Rremove, Tag: 42},
 
+		Message{Type: Tstat, Tag: 42, Fid: 42},
 		Message{Type: Rstat, Tag: 42, Stat: testStats[0]},
 		Message{Type: Rstat, Tag: 42, Stat: testStats[1]},
 		Message{Type: Rstat, Tag: 42, Stat: testStats[2]},
@@ -143,6 +144,11 @@ func TestMessageEncoding(t *testing.T) {
 		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[0]},
 		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[1]},
 		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[2]},
+
+		Message{Type: Rflush, Tag: 42},
+		Message{Type: Rclunk, Tag: 42},
+		Message{Type: Rremove, Tag: 42},
+		Message{Type: Rwstat, Tag: 42},
 	} {
 		data, err := in.MarshalBinary()
 		if err != nil {
