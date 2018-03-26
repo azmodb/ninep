@@ -72,7 +72,23 @@ func (e *Encoder) encode(m *Message) error {
 	case Tflush:
 		e.puint16(m.Oldtag)
 	case Twalk:
+		if len(m.Wname) > maxWalkNames {
+			return errMaxWalkNames
+		}
+		e.puint32(m.Fid)
+		e.puint32(m.Newfid)
+		e.puint16(uint16(len(m.Wname)))
+		for _, name := range m.Wname {
+			e.pstring(name)
+		}
 	case Rwalk:
+		if len(m.Wqid) > maxWalkNames {
+			return errMaxWalkNames
+		}
+		e.puint16(uint16(len(m.Wqid)))
+		for _, q := range m.Wqid {
+			e.pqid(q)
+		}
 	case Topen:
 		e.puint32(m.Fid)
 		e.puint8(m.Mode)
@@ -89,22 +105,24 @@ func (e *Encoder) encode(m *Message) error {
 		e.puint64(m.Offset)
 		e.puint32(m.Count)
 	case Rread:
-		e.puint32(m.Count)
 		e.pdata(m.Data)
 	case Twrite:
 		e.puint32(m.Fid)
 		e.puint64(m.Offset)
-		e.puint32(m.Count)
 		e.pdata(m.Data)
 	case Rwrite:
 		e.puint32(m.Count)
 	case Tclunk, Tremove, Tstat:
 		e.puint32(m.Fid)
 	case Rstat:
-		e.pstat(m.Stat)
+		size := uint16(m.Stat.len())
+		e.puint16(2 + size)
+		e.pstat(m.Stat, size)
 	case Twstat:
 		e.puint32(m.Fid)
-		e.pstat(m.Stat)
+		size := uint16(m.Stat.len())
+		e.puint16(2 + size)
+		e.pstat(m.Stat, size)
 	case Rflush, Rclunk, Rremove, Rwstat:
 		// nothing
 	default:
@@ -120,8 +138,8 @@ func (e *Encoder) pheader(size uint32, typ uint8, tag uint16) {
 	e.write(e.buf[:7])
 }
 
-func (e *Encoder) pstat(v Stat) {
-	puint16(e.buf[0:2], uint16(v.len()))
+func (e *Encoder) pstat(v Stat, size uint16) {
+	puint16(e.buf[0:2], size)
 	puint16(e.buf[2:4], v.Type)
 	puint32(e.buf[4:8], v.Dev)
 	e.write(e.buf[:8])

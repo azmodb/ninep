@@ -15,9 +15,10 @@ import (
 // should be delegated to a single thread of execution or protected by a
 // mutex.
 type Decoder struct {
-	r   *bufio.Reader // stream reader
-	err error
-	buf [headerLen]byte
+	r       *bufio.Reader // stream reader
+	err     error
+	maxSize int64
+	buf     [headerLen]byte
 }
 
 // NewDecoder returns a new decoder that reads from the io.Reader.
@@ -36,22 +37,11 @@ func (d *Decoder) Decode(m *Message) error {
 	if err := d.readFull(d.buf[:headerLen]); err != nil {
 		return err
 	}
-	size := int64(guint32(d.buf[:4]))
-	if size < headerLen {
-		return errMessageTooSmall
-	}
-	//if size > d.maxSize {
-	//	return errMessageTooLarge
-	//}
 
-	typ := d.buf[4]
-	if typ == Terror || typ < Tversion || typ > Rwstat {
-		d.discard(size - headerLen)
-		return errInvalidMessageType
-	}
-	if size < minSizeLUT64[typ-100] {
-		d.discard(size - headerLen)
-		return errMessageTooSmall
+	size, _, err := gheader(d.buf[:headerLen])
+	if err != nil {
+		d.discard(int64(size) - headerLen)
+		return err
 	}
 
 	data := make([]byte, size)
@@ -65,63 +55,82 @@ func (d *Decoder) Decode(m *Message) error {
 }
 
 func unmarshal(b []byte, m *Message) error {
-	m.Type = b[4]
-	m.Tag = guint16(b[5:7])
+	m.Type, b = b[4], b[5:]
+	m.Tag, b = guint16(b)
 
 	switch m.Type {
 	case Tversion, Rversion:
-		m.Msize = guint32(b[7:11])
-		gstring(b[11:], &m.Version)
+		m.Msize, b = guint32(b)
+		m.Version, b = gstring(b)
 	case Tauth:
-		m.Afid = guint32(b[7:11])
-		n := 11 + gstring(b[11:], &m.Uname)
-		gstring(b[n:], &m.Aname)
+		m.Afid, b = guint32(b)
+		m.Uname, b = gstring(b)
+		m.Aname, b = gstring(b)
 	case Tattach:
-		m.Fid = guint32(b[7:11])
-		m.Afid = guint32(b[11:15])
-		n := 15 + gstring(b[15:], &m.Uname)
-		gstring(b[n:], &m.Aname)
+		m.Fid, b = guint32(b)
+		m.Afid, b = guint32(b)
+		m.Uname, b = gstring(b)
+		m.Aname, b = gstring(b)
 	case Rauth, Rattach:
-		m.Qid.unmarshal(b[7:20])
+		b = m.Qid.unmarshal(b)
 	case Rerror:
-		gstring(b[7:], &m.Ename)
+		m.Ename, b = gstring(b)
 	case Tflush:
-		m.Oldtag = guint16(b[7:9])
+		m.Oldtag, b = guint16(b)
 	case Twalk:
-		m.Fid = guint32(b[7:11])
+		m.Fid, b = guint32(b)
+		m.Newfid, b = guint32(b)
+		n, b := guint16(b)
+		if n > maxWalkNames {
+			return errMaxWalkNames
+		}
+		m.Wname = make([]string, n)
+		for i := range m.Wname {
+			m.Wname[i], b = gstring(b)
+		}
 	case Rwalk:
+		n, b := guint16(b)
+		if n > maxWalkNames {
+			return errMaxWalkNames
+		}
+		m.Wqid = make([]Qid, n)
+		for i := range m.Wqid {
+			b = m.Wqid[i].unmarshal(b)
+		}
 	case Topen:
-		m.Fid = guint32(b[7:11])
-		m.Mode = b[11]
+		m.Fid, b = guint32(b)
+		m.Mode = b[0]
 	case Tcreate:
-		m.Fid = guint32(b[7:11])
-		n := 11 + gstring(b[11:], &m.Name)
-		m.Perm = guint32(b[n:])
-		m.Mode = b[n+4]
+		m.Fid, b = guint32(b)
+		m.Name, b = gstring(b)
+		m.Perm, b = guint32(b)
+		m.Mode = b[0]
 	case Ropen, Rcreate:
-		m.Qid.unmarshal(b[7:20])
-		m.Iounit = guint32(b[20:24])
+		b = m.Qid.unmarshal(b)
+		m.Iounit, b = guint32(b)
 	case Tread:
-		m.Fid = guint32(b[7:11])
-		m.Offset = guint64(b[11:19])
-		m.Count = guint32(b[19:23])
+		m.Fid, b = guint32(b)
+		m.Offset, b = guint64(b)
+		m.Count, b = guint32(b)
 	case Rread:
-		m.Count = guint32(b[7:11])
-		m.Data = gdata(b[11:], m.Data)
+		m.Count, b = guint32(b)
+		m.Data = b // TODO
 	case Twrite:
-		m.Fid = guint32(b[7:11])
-		m.Offset = guint64(b[11:19])
-		m.Count = guint32(b[19:23])
-		m.Data = gdata(b[23:], m.Data)
+		m.Fid, b = guint32(b)
+		m.Offset, b = guint64(b)
+		m.Count, b = guint32(b)
+		m.Data = b // TODO
 	case Rwrite:
-		m.Count = guint32(b[7:11])
+		m.Count, b = guint32(b)
 	case Tclunk, Tremove, Tstat:
-		m.Fid = guint32(b[7:11])
+		m.Fid, b = guint32(b)
 	case Rstat:
-		m.Stat.unmarshal(b[7:])
+		b = m.Stat.unmarshal(b[4:])
+		return nil
 	case Twstat:
-		m.Fid = guint32(b[7:11])
-		m.Stat.unmarshal(b[11:])
+		m.Fid, b = guint32(b)
+		b = m.Stat.unmarshal(b[4:])
+		return nil
 	case Rflush, Rclunk, Rremove, Rwstat:
 		// nothing
 	}

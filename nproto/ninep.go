@@ -63,17 +63,9 @@ var minSizeLUT = [28]uint32{
 	11,                // size[4] Tremove tag[2] fid[4]
 	7,                 // size[4] Rremove tag[2]
 	11,                // size[4] Tstat tag[2] fid[4]
-	11 + fixedStatLen, // size[4] Rstat tag[2] stat[n]
-	15 + fixedStatLen, // size[4] Twstat tag[2] fid[4] stat[n]
+	9 + fixedStatLen,  // size[4] Rstat tag[2] stat[n]
+	13 + fixedStatLen, // size[4] Twstat tag[2] fid[4] stat[n]
 	7,                 // size[4] Rwstat tag[2]
-}
-
-var minSizeLUT64 [28]int64
-
-func init() {
-	for i, s := range minSizeLUT {
-		minSizeLUT64[i] = int64(s)
-	}
 }
 
 var sizeFunc = map[uint8]func(m *Message) uint32{
@@ -118,7 +110,9 @@ var sizeFunc = map[uint8]func(m *Message) uint32{
 	},
 	Rcreate: func(m *Message) uint32 { return minSizeLUT[Rcreate-100] },
 	Tread:   func(m *Message) uint32 { return minSizeLUT[Tread-100] },
-	Rread:   func(m *Message) uint32 { return minSizeLUT[Rread-100] },
+	Rread: func(m *Message) uint32 {
+		return minSizeLUT[Rread-100] + uint32(len(m.Data))
+	},
 	Twrite: func(m *Message) uint32 {
 		return minSizeLUT[Twrite-100] + uint32(len(m.Data))
 	},
@@ -131,12 +125,12 @@ var sizeFunc = map[uint8]func(m *Message) uint32{
 	Rstat: func(m *Message) uint32 {
 		s := m.Stat
 		strLen := len(s.Name) + len(s.UID) + len(s.GID) + len(s.MUID)
-		return minSizeLUT[Rstat-100] + uint32(strLen)
+		return 2 + minSizeLUT[Rstat-100] + uint32(strLen)
 	},
 	Twstat: func(m *Message) uint32 {
 		s := m.Stat
 		strLen := len(s.Name) + len(s.UID) + len(s.GID) + len(s.MUID)
-		return minSizeLUT[Twstat-100] + uint32(strLen)
+		return 2 + minSizeLUT[Twstat-100] + uint32(strLen)
 	},
 	Rwstat: func(m *Message) uint32 { return minSizeLUT[Rwstat-100] },
 }
@@ -144,6 +138,10 @@ var sizeFunc = map[uint8]func(m *Message) uint32{
 // Defines some limits on how big some arbitrarily-long 9P2000 fields can
 // be.
 const (
+	// maxWalkName is the maximum allowed number of path elements in a
+	// Twalk request.
+	maxWalkNames = 16
+
 	// size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 	// size[4] Tread  tag[2] fid[4] offset[8] count[4]
 	fixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
@@ -166,6 +164,8 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
+	errMaxWalkNames = Error("maximum walk elements exceeded")
+
 	errInvalidMessageType = Error("invalid message type")
 	errMessageTooLarge    = Error("message too large")
 	errMessageTooSmall    = Error("message too small")
@@ -235,9 +235,10 @@ type Stat struct {
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 func (s Stat) MarshalBinary() ([]byte, error) {
-	buf := newBuffer(s.len())
+	size := s.len()
+	buf := newBuffer(size)
 	enc := NewEncoder(&buf)
-	enc.pstat(s)
+	enc.pstat(s, uint16(size))
 	if enc.err != nil {
 		return nil, enc.err
 	}
@@ -246,7 +247,7 @@ func (s Stat) MarshalBinary() ([]byte, error) {
 
 func (s Stat) len() int {
 	strLen := len(s.Name) + len(s.UID) + len(s.GID) + len(s.MUID)
-	return 2 + fixedStatLen + strLen
+	return fixedStatLen + strLen
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -255,23 +256,23 @@ func (s *Stat) UnmarshalBinary(data []byte) error {
 		return io.ErrUnexpectedEOF
 	}
 
-	s.unmarshal(data)
+	s.unmarshal(data[2:])
 	return nil
 }
 
-func (s *Stat) unmarshal(b []byte) {
-	s.Type = guint16(b[2:4])
-	s.Dev = guint32(b[4:8])
-	s.Qid.unmarshal(b[8:21])
-	s.Mode = guint32(b[21:25])
-	s.Atime = guint32(b[25:29])
-	s.Mtime = guint32(b[29:33])
-	s.Length = guint64(b[33:41])
-
-	n := 41 + gstring(b[41:], &s.Name)
-	n += gstring(b[n:], &s.UID)
-	n += gstring(b[n:], &s.GID)
-	n += gstring(b[n:], &s.MUID)
+func (s *Stat) unmarshal(b []byte) []byte {
+	s.Type, b = guint16(b)
+	s.Dev, b = guint32(b)
+	b = s.Qid.unmarshal(b)
+	s.Mode, b = guint32(b)
+	s.Atime, b = guint32(b)
+	s.Mtime, b = guint32(b)
+	s.Length, b = guint64(b)
+	s.Name, b = gstring(b)
+	s.UID, b = gstring(b)
+	s.GID, b = gstring(b)
+	s.MUID, b = gstring(b)
+	return b
 }
 
 func (s Stat) String() string {
@@ -319,10 +320,11 @@ func (q *Qid) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (q *Qid) unmarshal(b []byte) {
-	q.Type = b[0]
-	q.Version = guint32(b[1:5])
-	q.Path = guint64(b[5:13])
+func (q *Qid) unmarshal(b []byte) []byte {
+	q.Type, b = b[0], b[1:]
+	q.Version, b = guint32(b)
+	q.Path, b = guint64(b)
+	return b
 }
 
 func (q Qid) String() string {
@@ -387,20 +389,8 @@ func (m Message) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
 func (m *Message) UnmarshalBinary(data []byte) error {
-	size := int64(guint32(data[:4]))
-	if size < headerLen {
-		return errMessageTooSmall
-	}
-	//if size > d.maxSize {
-	//  return errMessageTooLarge
-	//}
-
-	typ := data[4]
-	if typ == Terror || typ < Tversion || typ > Rwstat {
-		return errInvalidMessageType
-	}
-	if size < minSizeLUT64[typ-100] {
-		return errMessageTooSmall
+	if _, _, err := gheader(data); err != nil {
+		return err
 	}
 	return unmarshal(data, m)
 }

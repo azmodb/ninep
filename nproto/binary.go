@@ -2,58 +2,50 @@ package ninep
 
 import "encoding/binary"
 
-func pstring(b []byte, s string) int {
-	_ = b[2+len(s)-1] // bounds check hint to compiler
-	puint16(b[0:2], uint16(len(s)))
-	if len(s) == 0 {
-		return 2
+func gheader(b []byte) (size uint32, typ uint8, err error) {
+	if len(b) < headerLen {
+		return size, typ, errMessageTooSmall
 	}
-	return 2 + copy(b[2:], s)
+
+	size = binary.LittleEndian.Uint32(b[0:4])
+	if size < headerLen {
+		return size, typ, errMessageTooSmall
+	}
+
+	typ = b[4]
+	if typ == Terror || typ < Tversion || typ > Rwstat {
+		return size, typ, errInvalidMessageType
+	}
+	if size < minSizeLUT[typ-100] {
+		return size, typ, errMessageTooSmall
+	}
+	return size, typ, nil
 }
 
-func gstring(b []byte, s *string) int {
-	_ = b[1] // bounds check hint to compiler
-	size := int(guint16(b[0:2]))
-	if size == 0 {
-		*s = ""
-		return 2
+func gstring(b []byte) (string, []byte) {
+	n := binary.LittleEndian.Uint16(b[0:2])
+	if n == 0 {
+		return "", b[2:]
 	}
-	*s = string(b[2 : 2+size])
-	return 2 + size
+	return string(b[2 : 2+n]), b[2+n:]
 }
 
-func gdata(b []byte, v []byte) []byte {
-	_ = b[3] // bounds check hint to compiler
-	size := int(guint32(b[0:4]))
-	if size == 0 && v == nil {
-		return nil
-	}
-	if size == 0 {
-		return v[0:]
-	}
-	if cap(v) < size {
-		v = make([]byte, size)
-	}
-	v = v[0:size]
-	copy(v, b[4:4+size])
-	return v
+func guint64(b []byte) (uint64, []byte) {
+	v := binary.LittleEndian.Uint64(b)
+	return v, b[8:]
 }
 
-func puint8(b []byte, v uint8) {
-	_ = b[0] // bounds check hint to compiler
-	b[0] = v
+func guint32(b []byte) (uint32, []byte) {
+	v := binary.LittleEndian.Uint32(b)
+	return v, b[4:]
 }
 
-func guint8(b []byte) uint8 {
-	_ = b[0] // bounds check hint to compiler
-	return b[0]
+func guint16(b []byte) (uint16, []byte) {
+	v := binary.LittleEndian.Uint16(b)
+	return v, b[2:]
 }
 
 var (
-	guint64 = binary.LittleEndian.Uint64
-	guint32 = binary.LittleEndian.Uint32
-	guint16 = binary.LittleEndian.Uint16
-
 	puint64 = binary.LittleEndian.PutUint64
 	puint32 = binary.LittleEndian.PutUint32
 	puint16 = binary.LittleEndian.PutUint16

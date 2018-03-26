@@ -1,6 +1,7 @@
 package ninep
 
 import (
+	"bytes"
 	"crypto/rand"
 	"math"
 	"reflect"
@@ -8,11 +9,27 @@ import (
 	"time"
 )
 
-var testQids = []Qid{
-	Qid{Type: QTDIR, Version: math.MaxUint32, Path: math.MaxUint64},
-	Qid{Type: QTFILE, Version: 42, Path: 42},
-	Qid{},
-}
+var (
+	testStats = []Stat{
+		Stat{
+			Type: math.MaxUint16, Dev: math.MaxUint16, Qid: testQids[0], Mode: math.MaxUint32,
+			Atime: math.MaxUint32, Mtime: math.MaxUint32, Length: math.MaxUint64,
+			Name: "/tmp", UID: "glenda", GID: "lab", MUID: "bootes",
+		},
+		Stat{
+			Type: 0x01, Dev: 42, Qid: testQids[1], Mode: 42,
+			Atime: uint32(time.Now().Unix()), Mtime: uint32(time.Now().Unix()), Length: 42,
+			Name: "/tmp", UID: "glenda", GID: "lab", MUID: "bootes",
+		},
+		Stat{},
+	}
+
+	testQids = []Qid{
+		Qid{Type: QTDIR, Version: math.MaxUint32, Path: math.MaxUint64},
+		Qid{Type: QTFILE, Version: 42, Path: 42},
+		Qid{},
+	}
+)
 
 func TestQidEncoding(t *testing.T) {
 	for _, in := range testQids {
@@ -34,35 +51,7 @@ func TestQidEncoding(t *testing.T) {
 }
 
 func TestStatEncoding(t *testing.T) {
-	for _, in := range []Stat{
-		{
-			Type:   math.MaxUint16,
-			Dev:    math.MaxUint16,
-			Qid:    testQids[0],
-			Mode:   math.MaxUint32,
-			Atime:  math.MaxUint32,
-			Mtime:  math.MaxUint32,
-			Length: math.MaxUint64,
-			Name:   "/tmp",
-			UID:    "glenda",
-			GID:    "lab",
-			MUID:   "bootes",
-		},
-		{
-			Type:   0x01,
-			Dev:    42,
-			Qid:    testQids[1],
-			Mode:   42,
-			Atime:  uint32(time.Now().Unix()),
-			Mtime:  uint32(time.Now().Unix()),
-			Length: math.MaxUint32,
-			Name:   "/tmp",
-			UID:    "glenda",
-			GID:    "lab",
-			MUID:   "bootes",
-		},
-		{},
-	} {
+	for _, in := range testStats {
 		data, err := in.MarshalBinary()
 		if err != nil {
 			t.Fatalf("stat: marshal failed: %v", err)
@@ -105,6 +94,12 @@ func TestMessageEncoding(t *testing.T) {
 		Message{Type: Rflush, Tag: 42},
 		Message{Type: Rflush, Tag: math.MaxUint16},
 
+		Message{Type: Twalk, Tag: 42, Fid: 1, Newfid: 2,
+			Wname: []string{"usr", "glenda", "lib"}},
+		Message{Type: Twalk, Tag: 2, Fid: math.MaxUint32 - 1, Newfid: math.MaxUint32,
+			Wname: []string{"usr", "glenda", "lib"}},
+		Message{Type: Rwalk, Tag: 42, Wqid: testQids},
+
 		Message{Type: Topen, Tag: 42, Fid: 1, Mode: OREAD},
 		Message{Type: Topen, Tag: 42, Fid: 1, Mode: OWRITE},
 		Message{Type: Topen, Tag: 42, Fid: 1, Mode: ORDWR},
@@ -123,15 +118,16 @@ func TestMessageEncoding(t *testing.T) {
 		Message{Type: Tread, Tag: 42, Fid: 42, Offset: 0, Count: 8192},
 		Message{Type: Tread, Tag: 42, Fid: 42, Offset: 8192, Count: 8192},
 		Message{Type: Tread, Tag: 42, Fid: 42, Offset: 0, Count: 0},
+
 		Message{Type: Rread, Tag: 42, Count: uint32(len(testData)), Data: testData},
 
 		Message{Type: Twrite, Tag: 42, Fid: 42, Offset: 0,
 			Count: uint32(len(testData)), Data: testData},
 		Message{Type: Twrite, Tag: 42, Fid: 42, Offset: 8192,
 			Count: uint32(len(testData)), Data: testData},
-		// TODO
-		//Message{Type: Twrite, Tag: 42, Fid: 42, Offset: 0,
-		//	Count: 0, Data: []byte{}},
+		Message{Type: Twrite, Tag: 42, Fid: 42, Offset: 0,
+			Count: 0, Data: []byte{}},
+
 		Message{Type: Rwrite, Tag: 42, Count: 0},
 		Message{Type: Rwrite, Tag: 42, Count: 8192},
 
@@ -139,6 +135,14 @@ func TestMessageEncoding(t *testing.T) {
 		Message{Type: Rclunk, Tag: 42},
 		Message{Type: Tremove, Tag: 42, Fid: 42},
 		Message{Type: Rremove, Tag: 42},
+
+		Message{Type: Rstat, Tag: 42, Stat: testStats[0]},
+		Message{Type: Rstat, Tag: 42, Stat: testStats[1]},
+		Message{Type: Rstat, Tag: 42, Stat: testStats[2]},
+
+		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[0]},
+		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[1]},
+		Message{Type: Twstat, Tag: 42, Fid: 42, Stat: testStats[2]},
 	} {
 		data, err := in.MarshalBinary()
 		if err != nil {
@@ -151,8 +155,15 @@ func TestMessageEncoding(t *testing.T) {
 			t.Fatalf("message: unmarshal failed: %v", err)
 		}
 
-		//		fmt.Println("<-", in)
-		//		fmt.Println("->", out)
+		if !reflect.DeepEqual(in, out) {
+			t.Fatalf("message: expected %+v, got %+v", in, out)
+		}
+
+		out = Message{}
+		dec := NewDecoder(bytes.NewReader(data))
+		if err = dec.Decode(&out); err != nil {
+			t.Fatalf("message: decode failed: %v", err)
+		}
 
 		if !reflect.DeepEqual(in, out) {
 			t.Fatalf("message: expected %+v, got %+v", in, out)
