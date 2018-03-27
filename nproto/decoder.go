@@ -44,6 +44,11 @@ func (d *Decoder) Decode(m *Message) error {
 		return err
 	}
 
+	if m == nil {
+		d.discard(int64(size) - headerLen)
+		return nil
+	}
+
 	data := make([]byte, size)
 	copy(data[:headerLen], d.buf[:headerLen])
 	if size > headerLen {
