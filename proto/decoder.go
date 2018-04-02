@@ -40,7 +40,7 @@ func (d *decoder) Decode() (Message, error) {
 		return nil, err
 	}
 
-	size, _, err := gheader(d.buf[:headerLen])
+	size, typ, err := gheader(d.buf[:headerLen])
 	if err != nil {
 		d.discard(int64(size) - headerLen)
 		return nil, err
@@ -53,8 +53,70 @@ func (d *decoder) Decode() (Message, error) {
 			return nil, err
 		}
 	}
-	//return unmarshal(data, m)
-	return nil, nil
+	return d.parse(typ, data)
+}
+
+func (d *decoder) parse(typ uint8, data []byte) (m Message, err error) {
+	switch typ {
+	case msgTversion:
+		m, err = parseTversion(data)
+	case msgRversion:
+		m, err = parseRversion(data)
+	case msgTauth:
+		m, err = parseTauth(data)
+	case msgRauth:
+		m = Rauth(data)
+	case msgTattach:
+		m, err = parseTattach(data)
+	case msgRattach:
+		m = Rattach(data)
+	case msgTflush:
+		m = Tflush(data)
+	case msgRflush:
+		m = Rflush(data)
+	case msgTwalk:
+		m, err = parseTwalk(data)
+	case msgRwalk:
+		m = Rwalk(data)
+	case msgTopen:
+		m = Topen(data)
+	case msgRopen:
+		m = Ropen(data)
+	case msgTcreate:
+		m, err = parseTcreate(data)
+	case msgRcreate:
+		m = Rcreate(data)
+	case msgTread:
+		m = Tread(data)
+	case msgRread:
+		//m, err = parseRread(data, d.dataSize)
+	case msgTwrite:
+		//m, err = parseTwrite(data, d.dataSize)
+	case msgRwrite:
+		m = Rwrite(data)
+	case msgTclunk:
+		m = Tclunk(data)
+	case msgRclunk:
+		m = Rclunk(data)
+	case msgTremove:
+		m = Tremove(data)
+	case msgRremove:
+		m = Rremove(data)
+	case msgTstat:
+		m = Tstat(data)
+	case msgRstat:
+		m, err = parseRstat(data)
+	case msgTwstat:
+		m, err = parseTwstat(data)
+	case msgRwstat:
+		m = Rwstat(data)
+	case msgRerror:
+		m = Rerror(data)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return m, err
 }
 
 func (d *decoder) readFull(buf []byte) error {

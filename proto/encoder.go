@@ -51,6 +51,7 @@ type encoder struct {
 	buf [20]byte
 }
 
+// NewEncoder returns a new encoder that will transmit on the io.Writer.
 func NewEncoder(w io.Writer, opts ...Option) Encoder {
 	return newEncoder(w, opts...)
 }
