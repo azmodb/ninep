@@ -3,3 +3,6 @@ fuzz: proto-fuzz.zip
 
 proto-fuzz.zip:
 	go-fuzz-build github.com/azmodb/ninep/proto
+
+clean:
+	rm -rf fuzz-data proto-fuzz.zip
