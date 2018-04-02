@@ -66,6 +66,10 @@ const (
 
 	maxMessageLen = (fixedReadWriteLen + 1) + maxDataLen
 	maxDataLen    = (1<<31 - 1) - (fixedReadWriteLen + 1) // ~ 2GB
+
+	defaultMaxMessageLen = (fixedReadWriteLen + 1) + defaultMaxDataLen
+
+	defaultMaxDataLen = 2 * 1024 * 1024
 )
 
 var minSizeLUT = [28]uint32{

@@ -108,22 +108,25 @@ func verifyData(buf []byte, offset int, max int64) error {
 	return nil
 }
 
-func gheader(b []byte) (size uint32, typ uint8, err error) {
+func gheader(b []byte, msize int64) (uint32, uint8, error) {
 	if len(b) < headerLen {
-		return size, typ, errMessageTooSmall
+		return 0, 0, errMessageTooSmall
 	}
 
-	size = binary.LittleEndian.Uint32(b[0:4])
+	size := binary.LittleEndian.Uint32(b[0:4])
 	if size < headerLen {
-		return size, typ, errMessageTooSmall
+		return 0, 0, errMessageTooSmall
+	}
+	if int64(size) > msize {
+		return 0, 0, errMessageTooLarge
 	}
 
-	typ = b[4]
+	typ := b[4]
 	if typ == msgTerror || typ < msgTversion || typ > msgRwstat {
-		return size, typ, errInvalidMessageType
+		return 0, 0, errInvalidMessageType
 	}
 	if size < minSize(typ) {
-		return size, typ, errMessageTooSmall
+		return 0, 0, errMessageTooSmall
 	}
 	return size, typ, nil
 }

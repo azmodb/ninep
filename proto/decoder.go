@@ -18,12 +18,17 @@ type Decoder interface {
 	// in the data represented by Message. If m is nil, the value will
 	// be discarded.
 	Decode() (Message, error)
+
+	SetMaxMessageSize(size uint32)
+	MaxMessageSize() uint32
 }
 
 type decoder struct {
-	buf [headerLen]byte
-	r   io.Reader
-	err error
+	buf   [headerLen]byte
+	r     io.Reader
+	err   error
+	msize int64
+	dsize int64
 }
 
 // NewDecoder returns a new decoder that reads from the io.Reader.
@@ -32,7 +37,23 @@ func NewDecoder(r io.Reader, opts ...Option) Decoder {
 }
 
 func newDecoder(r io.Reader, opts ...Option) *decoder {
-	return &decoder{r: r}
+	d := &decoder{
+		msize: defaultMaxMessageLen,
+		dsize: defaultMaxDataLen,
+		r:     r,
+	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
+}
+
+func (d *decoder) SetMaxMessageSize(size uint32) {
+	d.msize = int64(size)
+}
+
+func (d *decoder) MaxMessageSize() uint32 {
+	return uint32(d.msize)
 }
 
 func (d *decoder) Decode() (Message, error) {
@@ -40,7 +61,7 @@ func (d *decoder) Decode() (Message, error) {
 		return nil, err
 	}
 
-	size, typ, err := gheader(d.buf[:headerLen])
+	size, typ, err := gheader(d.buf[:headerLen], d.msize)
 	if err != nil {
 		d.discard(int64(size) - headerLen)
 		return nil, err
@@ -89,9 +110,9 @@ func (d *decoder) parse(typ uint8, data []byte) (m Message, err error) {
 	case msgTread:
 		m = Tread(data)
 	case msgRread:
-		//m, err = parseRread(data, d.dataSize)
+		m, err = parseRread(data, d.dsize)
 	case msgTwrite:
-		//m, err = parseTwrite(data, d.dataSize)
+		m, err = parseTwrite(data, d.dsize)
 	case msgRwrite:
 		m = Rwrite(data)
 	case msgTclunk:
