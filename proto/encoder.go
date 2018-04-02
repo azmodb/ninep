@@ -41,14 +41,18 @@ type Encoder interface {
 
 	Rerrorf(tag uint16, format string, args ...interface{}) error
 	Rerror(tag uint16, err error) error
+
+	SetMaxMessageSize(size uint32)
+	MaxMessageSize() uint32
 }
 
 type Option func(interface{})
 
 type encoder struct {
-	w   io.Writer
-	err error
-	buf [20]byte
+	w     io.Writer
+	err   error
+	buf   [20]byte
+	msize int64
 }
 
 // NewEncoder returns a new encoder that will transmit on the io.Writer.
@@ -57,11 +61,22 @@ func NewEncoder(w io.Writer, opts ...Option) Encoder {
 }
 
 func newEncoder(w io.Writer, opts ...Option) *encoder {
-	e := &encoder{w: w}
+	e := &encoder{
+		msize: defaultMaxMessageLen,
+		w:     w,
+	}
 	for _, opt := range opts {
 		opt(e)
 	}
 	return e
+}
+
+func (e *encoder) SetMaxMessageSize(size uint32) {
+	e.msize = int64(size)
+}
+
+func (e *encoder) MaxMessageSize() uint32 {
+	return uint32(e.msize)
 }
 
 func (e *encoder) version(typ uint8, tag uint16, msize uint32, version string) error {
