@@ -1,6 +1,9 @@
 package proto
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // NOFID is a reserved fid used in a Tattach request for the afid field,
 // that indicates that the client does not wish to authenticate his
@@ -153,6 +156,29 @@ func (q *Qid) UnmarshalBinary(data []byte) error {
 
 	*q = gqid(data)
 	return nil
+}
+
+func (q Qid) String() string {
+	t := ""
+	if q.Type&QTDIR != 0 {
+		t += "d"
+	}
+	if q.Type&QTAPPEND != 0 {
+		t += "a"
+	}
+	if q.Type&QTEXCL != 0 {
+		t += "l"
+	}
+	if q.Type&QTMOUNT != 0 {
+		t += "m"
+	}
+	if q.Type&QTAUTH != 0 {
+		t += "A"
+	}
+	if q.Type&QTTMP != 0 {
+		t += "t"
+	}
+	return fmt.Sprintf("(%.16x %d %q)", q.Path, q.Version, t)
 }
 
 // Message represents a 9P2000 message and is used to access fields common
