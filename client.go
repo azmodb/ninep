@@ -13,9 +13,7 @@ import (
 type ConnOption func(*Conn) error
 
 type Conn struct {
-	writer sync.Mutex // exclusive stream encoder
-	enc    proto.Encoder
-
+	enc *encoder // exclusive 9P2000 stream encoder
 	dec proto.Decoder
 	c   io.Closer
 
@@ -43,8 +41,8 @@ func NewConn(rwc io.ReadWriteCloser, opts ...ConnOption) (*Conn, error) {
 		freetag: make(map[uint16]struct{}),
 		freefid: make(map[uint32]struct{}),
 
-		enc: proto.NewEncoder(rwc),
-		dec: proto.NewDecoder(rwc),
+		enc: newEncoder(rwc),
+		dec: newDecoder(rwc),
 		c:   rwc,
 	}
 	go c.recv()
@@ -107,10 +105,7 @@ func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, e
 		afid = fid.num
 	}
 
-	c.writer.Lock()
-	err = c.enc.Tattach(tag, num, afid, user, root)
-	c.writer.Unlock()
-	if err != nil {
+	if err = c.enc.Tattach(tag, num, afid, user, root); err != nil {
 		c.deregister(tag)
 		return nil, err
 	}
