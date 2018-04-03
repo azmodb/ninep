@@ -23,9 +23,9 @@ type Encoder interface {
 	Twalk(tag uint16, fid, newfid uint32, names ...string) error
 	Rwalk(tag uint16, qids ...Qid) error
 	Topen(tag uint16, fid uint32, mode uint8) error
-	Ropen(tag uint16, qid Qid, iouint uint32) error
+	Ropen(tag uint16, qid Qid, iounit uint32) error
 	Tcreate(tag uint16, fid uint32, name string, perm uint32, mode uint8) error
-	Rcreate(tag uint16, qid Qid, iouint uint32) error
+	Rcreate(tag uint16, qid Qid, iounit uint32) error
 	Tread(tag uint16, fid uint32, offset uint64, count uint32) error
 	Rread(tag uint16, data []byte) error
 	Twrite(tag uint16, fid uint32, offset uint64, data []byte) error
