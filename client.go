@@ -156,7 +156,11 @@ func (c *Conn) Auth(ctx context.Context, user, root string) (*Fid, error) {
 }
 
 func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, error) {
-	tag, num, ch, err := c.register(true)
+	tag, ch, err := c.register()
+	if err != nil {
+		return nil, err
+	}
+	num, err := c.nextFid()
 	if err != nil {
 		return nil, err
 	}
@@ -180,21 +184,6 @@ func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, e
 	return &Fid{num: num, qid: rx.Qid(), c: c}, err
 }
 
-func (c *Conn) nextTag() (uint16, error) {
-	var tag uint16
-	for tag, _ = range c.freetag {
-		delete(c.freetag, tag)
-	}
-	if tag == 0 {
-		c.tag++
-		if c.tag == proto.NOTAG {
-			return 0, errors.New("out of tags")
-		}
-		tag = c.tag
-	}
-	return tag, nil
-}
-
 func (c *Conn) nextFid() (uint32, error) {
 	var fid uint32
 	for fid, _ = range c.freefid {
@@ -210,27 +199,42 @@ func (c *Conn) nextFid() (uint32, error) {
 	return fid, nil
 }
 
-func (c *Conn) register(needFid bool) (uint16, uint32, <-chan interface{}, error) {
+func (c *Conn) putFid(fid uint32) {
+	c.mu.Lock()
+	if fid != 0 && fid != proto.NOFID {
+		c.freefid[fid] = struct{}{}
+	}
+	c.mu.Unlock()
+}
+
+func (c *Conn) nextTag() (uint16, error) {
+	var tag uint16
+	for tag, _ = range c.freetag {
+		delete(c.freetag, tag)
+	}
+	if tag == 0 {
+		c.tag++
+		if c.tag == proto.NOTAG {
+			return 0, errors.New("out of tags")
+		}
+		tag = c.tag
+	}
+	return tag, nil
+}
+
+func (c *Conn) register() (uint16, <-chan interface{}, error) {
 	c.mu.Lock()
 	tag, err := c.nextTag()
 	if err != nil {
 		c.mu.Unlock()
-		return 0, 0, nil, err
-	}
-	var fid uint32
-	if needFid {
-		fid, err = c.nextFid()
-		if err != nil {
-			c.mu.Unlock()
-			return 0, 0, nil, err
-		}
+		return 0, nil, err
 	}
 
 	ch := make(chan interface{}, 1)
 	c.pending[tag] = ch
 	c.mu.Unlock()
 
-	return tag, fid, ch, nil
+	return tag, ch, nil
 }
 
 func (c *Conn) deregister(tag uint16) chan<- interface{} {
@@ -242,14 +246,6 @@ func (c *Conn) deregister(tag uint16) chan<- interface{} {
 	delete(c.pending, tag)
 	c.mu.Unlock()
 	return ch
-}
-
-func (c *Conn) putFid(fid uint32) {
-	c.mu.Lock()
-	if fid != 0 && fid != proto.NOFID {
-		c.freefid[fid] = struct{}{}
-	}
-	c.mu.Unlock()
 }
 
 func (c *Conn) recv() {
@@ -299,7 +295,7 @@ func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
 }
 
 func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) error {
-	tag, _, ch, err := f.c.register(false)
+	tag, ch, err := f.c.register()
 	if err != nil {
 		return err
 	}
@@ -321,7 +317,7 @@ func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) 
 }
 
 func (f *Fid) Open(ctx context.Context, mode uint8) error {
-	tag, _, ch, err := f.c.register(false)
+	tag, ch, err := f.c.register()
 	if err != nil {
 		return err
 	}
@@ -338,10 +334,10 @@ func (f *Fid) Open(ctx context.Context, mode uint8) error {
 	}
 	log.Printf("-> Ropen tag:%d qid:%s iounit:%d", tag, rx.Qid(), rx.Iounit())
 	return nil
- }
+}
 
 func (f *Fid) Remove(ctx context.Context) error {
-	tag, _, ch, err := f.c.register(false)
+	tag, ch, err := f.c.register()
 	if err != nil {
 		return err
 	}
@@ -361,7 +357,7 @@ func (f *Fid) Remove(ctx context.Context) error {
 	f.c.putFid(f.num)
 	f.num = proto.NOFID
 	return nil
- }
+}
 
 func (f *Fid) Write(ctx context.Context, data []byte, offset int64) (int, error) {
 	return 0, nil
@@ -372,7 +368,7 @@ func (f *Fid) Read(ctx context.Context, data []byte, offset int64) (int, error) 
 }
 
 func (f *Fid) Close() error {
-	tag, _, ch, err := f.c.register(false)
+	tag, ch, err := f.c.register()
 	if err != nil {
 		return err
 	}
