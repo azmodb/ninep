@@ -359,12 +359,70 @@ func (f *Fid) Remove(ctx context.Context) error {
 	return nil
 }
 
-func (f *Fid) Write(ctx context.Context, data []byte, offset int64) (int, error) {
-	return 0, nil
+func (f *Fid) WriteAt(ctx context.Context, data []byte, offset int64) (int, error) {
+	msize := 4 * 8192 // TODO
+	done := 0
+	n := len(data)
+	first := true
+	for done < n || first {
+		want := n - done
+		if want > msize {
+			want = msize
+		}
+		m, err := f.writeAt(ctx, data[done:done+want], offset)
+		done += m
+		if err != nil {
+			return done, err
+		}
+		offset += int64(m)
+		first = false
+	}
+	return done, nil
 }
 
-func (f *Fid) Read(ctx context.Context, data []byte, offset int64) (int, error) {
-	return 0, nil
+func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, error) {
+	tag, ch, err := f.c.register()
+	if err != nil {
+		return 0, err
+	}
+
+	if err = f.c.enc.Twrite(tag, f.num, uint64(offset), data); err != nil {
+		f.c.deregister(tag)
+		return 0, err
+	}
+
+	var rx proto.Rwrite
+	if err = wait(ch, &rx); err != nil {
+		return 0, err
+	}
+	return int(rx.Count()), nil
+}
+
+func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error) {
+	msize := 4 * 8192 // TODO
+	n := len(data)
+	if n > msize {
+		n = msize
+	}
+
+	tag, ch, err := f.c.register()
+	if err != nil {
+		return 0, err
+	}
+
+	if err = f.c.enc.Tread(tag, f.num, uint64(offset), uint32(n)); err != nil {
+		f.c.deregister(tag)
+		return 0, err
+	}
+
+	var rx proto.Rread
+	if err = wait(ch, &rx); err != nil {
+		return 0, err
+	}
+	if len(rx.Data()) == 0 {
+		return 0, io.EOF
+	}
+	return copy(data, rx.Data()), nil
 }
 
 func (f *Fid) Close() error {
