@@ -156,7 +156,7 @@ func (c *Conn) Auth(ctx context.Context, user, root string) (*Fid, error) {
 }
 
 func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, error) {
-	tag, num, ch, err := c.register()
+	tag, num, ch, err := c.register(true)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, e
 	if err = wait(ch, &rx); err != nil {
 		return nil, err
 	}
-	log.Printf("<- Rattach tag:%d qid:%s", tag, rx.Qid())
+	log.Printf("-> Rattach tag:%d qid:%s", tag, rx.Qid())
 	return &Fid{num: num, qid: rx.Qid(), c: c}, err
 }
 
@@ -210,18 +210,20 @@ func (c *Conn) nextFid() (uint32, error) {
 	return fid, nil
 }
 
-func (c *Conn) register() (uint16, uint32, <-chan interface{}, error) {
-
+func (c *Conn) register(needFid bool) (uint16, uint32, <-chan interface{}, error) {
 	c.mu.Lock()
 	tag, err := c.nextTag()
 	if err != nil {
 		c.mu.Unlock()
 		return 0, 0, nil, err
 	}
-	fid, err := c.nextFid()
-	if err != nil {
-		c.mu.Unlock()
-		return 0, 0, nil, err
+	var fid uint32
+	if needFid {
+		fid, err = c.nextFid()
+		if err != nil {
+			c.mu.Unlock()
+			return 0, 0, nil, err
+		}
 	}
 
 	ch := make(chan interface{}, 1)
@@ -233,10 +235,21 @@ func (c *Conn) register() (uint16, uint32, <-chan interface{}, error) {
 
 func (c *Conn) deregister(tag uint16) chan<- interface{} {
 	c.mu.Lock()
+	if tag != 0 && tag != proto.NOTAG {
+		c.freetag[tag] = struct{}{}
+	}
 	ch := c.pending[tag]
 	delete(c.pending, tag)
 	c.mu.Unlock()
 	return ch
+}
+
+func (c *Conn) putFid(fid uint32) {
+	c.mu.Lock()
+	if fid != 0 && fid != proto.NOFID {
+		c.freefid[fid] = struct{}{}
+	}
+	c.mu.Unlock()
 }
 
 func (c *Conn) recv() {
@@ -286,12 +299,69 @@ func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
 }
 
 func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) error {
+	tag, _, ch, err := f.c.register(false)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("<- Tcreate tag:%d fid:%d name:%q perm:%d mode:%d", tag, f.num, name, perm, mode)
+	if err = f.c.enc.Tcreate(tag, f.num, name, perm, mode); err != nil {
+		f.c.deregister(tag)
+		return err
+	}
+
+	var rx proto.Rcreate
+	if err = wait(ch, &rx); err != nil {
+		return err
+	}
+	f.qid = rx.Qid()
+	log.Printf("-> Rcreate tag:%d qid:%s iounit:%d", tag, rx.Qid(), rx.Iounit())
+
 	return nil
 }
 
-func (f *Fid) Open(ctx context.Context, mode uint8) error { return nil }
+func (f *Fid) Open(ctx context.Context, mode uint8) error {
+	tag, _, ch, err := f.c.register(false)
+	if err != nil {
+		return err
+	}
 
-func (f *Fid) Remove(ctx context.Context) error { return nil }
+	log.Printf("<- Topen tag:%d fid:%d mode:%d", tag, f.num, mode)
+	if err = f.c.enc.Topen(tag, f.num, mode); err != nil {
+		f.c.deregister(tag)
+		return err
+	}
+
+	var rx proto.Ropen
+	if err = wait(ch, &rx); err != nil {
+		return err
+	}
+	log.Printf("-> Ropen tag:%d qid:%s iounit:%d", tag, rx.Qid(), rx.Iounit())
+	return nil
+ }
+
+func (f *Fid) Remove(ctx context.Context) error {
+	tag, _, ch, err := f.c.register(false)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("<- Tremove tag:%d fid:%d", tag, f.num)
+	if err = f.c.enc.Tremove(tag, f.num); err != nil {
+		f.c.deregister(tag)
+		return err
+	}
+
+	var rx proto.Rremove
+	if err = wait(ch, &rx); err != nil {
+		return err
+	}
+	log.Printf("-> Rremove tag:%d", tag)
+
+	f.c.putFid(f.num)
+	f.num = proto.NOFID
+	return nil
+ }
 
 func (f *Fid) Write(ctx context.Context, data []byte, offset int64) (int, error) {
 	return 0, nil
@@ -301,4 +371,23 @@ func (f *Fid) Read(ctx context.Context, data []byte, offset int64) (int, error) 
 	return 0, nil
 }
 
-func (f *Fid) Close() error { return nil }
+func (f *Fid) Close() error {
+	tag, _, ch, err := f.c.register(false)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("<- Tclunk tag:%d fid:%d", tag, f.num)
+	if err = f.c.enc.Tclunk(tag, f.num); err != nil {
+		f.c.deregister(tag)
+		return err
+	}
+
+	var rx proto.Rclunk
+	if err = wait(ch, &rx); err != nil {
+		return err
+	}
+	log.Printf("-> Rclunk tag:%d", tag)
+
+	return nil
+}
