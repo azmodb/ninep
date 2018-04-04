@@ -386,6 +386,7 @@ func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, erro
 		return 0, err
 	}
 
+	log.Printf("<- Twrite tag:%d fid:%d offset:%d count:%d", tag, f.num, offset, len(data))
 	if err = f.c.enc.Twrite(tag, f.num, uint64(offset), data); err != nil {
 		f.c.deregister(tag)
 		return 0, err
@@ -395,6 +396,7 @@ func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, erro
 	if err = wait(ch, &rx); err != nil {
 		return 0, err
 	}
+	log.Printf("-> Rwrite tag:%d count:%d", tag, rx.Count())
 	return int(rx.Count()), nil
 }
 
@@ -410,6 +412,7 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 		return 0, err
 	}
 
+	log.Printf("<- Tread tag:%d fid:%d offset:%d count:%d", tag, f.num, offset, n)
 	if err = f.c.enc.Tread(tag, f.num, uint64(offset), uint32(n)); err != nil {
 		f.c.deregister(tag)
 		return 0, err
@@ -422,6 +425,7 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 	if len(rx.Data()) == 0 {
 		return 0, io.EOF
 	}
+	log.Printf("-> Rread tag:%d count:%d", tag, len(rx.Data()))
 	return copy(data, rx.Data()), nil
 }
 
