@@ -144,6 +144,10 @@ func (e *encoder) Rflush(tag uint16) error {
 }
 
 func (e *encoder) Twalk(tag uint16, fid, newfid uint32, names ...string) error {
+	if len(names) > maxWalkElem {
+		return errMaxWalkElem
+	}
+
 	size := minSize(msgTwalk)
 	for _, n := range names {
 		size += 2 + uint32(len(n))
@@ -153,7 +157,7 @@ func (e *encoder) Twalk(tag uint16, fid, newfid uint32, names ...string) error {
 	e.puint32(fid)
 	e.puint32(newfid)
 
-	puint16(e.buf[:2], uint16(len(names))) // TODO: entries check
+	puint16(e.buf[:2], uint16(len(names)))
 	e.write(e.buf[:2])
 	for _, n := range names {
 		e.pstring(n)
@@ -162,6 +166,10 @@ func (e *encoder) Twalk(tag uint16, fid, newfid uint32, names ...string) error {
 }
 
 func (e *encoder) Rwalk(tag uint16, qids ...Qid) error {
+	if len(qids) > maxWalkElem {
+		return errMaxWalkElem
+	}
+
 	size := minSize(msgRwalk) + uint32(13*len(qids))
 	e.pheader(size, msgRwalk, tag)
 
