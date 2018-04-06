@@ -35,7 +35,7 @@ const (
 const (
 	// size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 	// size[4] Tread  tag[2] fid[4] offset[8] count[4]
-	fixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
+	FixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
 
 	// To make the contents of a directory, such as returned by read(5),
 	// easy to parse, each directory entry begins with a size field.
@@ -64,13 +64,15 @@ const (
 
 	maxPathLen = maxWalkElem + maxWalkElem*maxNameLen // 4096 bytes
 
-	maxMessageLen = (fixedReadWriteLen + 1) + maxDataLen
-	maxDataLen    = (1<<31 - 1) - (fixedReadWriteLen + 1) // ~ 2GB
+	MaxMessageLen = (FixedReadWriteLen + 1) + MaxDataLen
+	MaxDataLen    = (1<<31 - 1) - (FixedReadWriteLen + 1) // ~ 2GB
 
-	defaultMaxMessageLen = (fixedReadWriteLen + 1) + defaultMaxDataLen
+	DefaultMaxMessageLen = (FixedReadWriteLen + 1) + DefaultMaxDataLen
 
-	defaultMaxDataLen = 2 * 1024 * 1024
+	DefaultMaxDataLen = 2 * 1024 * 1024
 )
+
+const Version = "9P2000"
 
 var minSizeLUT = [28]uint32{
 	13,                // size[4] Tversion tag[2] msize[4] version[s]
@@ -89,9 +91,9 @@ var minSizeLUT = [28]uint32{
 	24,                // size[4] Ropen tag[2] qid[13] iounit[4]
 	18,                // size[4] Tcreate tag[2] fid[4] name[s] perm[4] mode[1]
 	24,                // size[4] Rcreate tag[2] qid[13] iounit[4]
-	fixedReadWriteLen, // size[4] Tread tag[2] fid[4] offset[8] count[4]
+	FixedReadWriteLen, // size[4] Tread tag[2] fid[4] offset[8] count[4]
 	11,                // size[4] Rread tag[2] count[4] data[count]
-	fixedReadWriteLen, // size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
+	FixedReadWriteLen, // size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 	11,                // size[4] Rwrite tag[2] count[4]
 	11,                // size[4] Tclunk tag[2] fid[4]
 	7,                 // size[4] Rclunk tag[2]

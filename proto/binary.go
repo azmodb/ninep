@@ -98,7 +98,7 @@ func verifyData(buf []byte, offset int, max int64) error {
 	if max > 0 && size > max {
 		return errDataTooLarge
 	}
-	if size > maxDataLen { // maxDataLen == ~ 2GB
+	if size > MaxDataLen { // MaxDataLen == ~ 2GB
 		return errDataTooLarge
 	}
 

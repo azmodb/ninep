@@ -62,7 +62,7 @@ func NewEncoder(w io.Writer, opts ...Option) Encoder {
 
 func newEncoder(w io.Writer, opts ...Option) *encoder {
 	e := &encoder{
-		msize: defaultMaxMessageLen,
+		msize: DefaultMaxMessageLen,
 		w:     w,
 	}
 	for _, opt := range opts {

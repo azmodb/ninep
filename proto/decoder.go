@@ -38,8 +38,8 @@ func NewDecoder(r io.Reader, opts ...Option) Decoder {
 
 func newDecoder(r io.Reader, opts ...Option) *decoder {
 	d := &decoder{
-		msize: defaultMaxMessageLen,
-		dsize: defaultMaxDataLen,
+		msize: DefaultMaxMessageLen,
+		dsize: DefaultMaxDataLen,
 		r:     r,
 	}
 	for _, opt := range opts {
