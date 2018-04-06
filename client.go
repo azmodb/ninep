@@ -48,7 +48,7 @@ func NewConn(rwc io.ReadWriteCloser, opts ...ConnOption) (*Conn, error) {
 	}
 	go c.recv()
 
-	if err := c.version(24+4*8192, "9P2000"); err != nil {
+	if err := c.version(proto.DefaultMaxMessageLen, proto.Version); err != nil {
 		c.Close()
 		return nil, err
 	}
@@ -291,7 +291,33 @@ type Fid struct {
 }
 
 func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
-	return nil, nil
+	tag, ch, err := f.c.register()
+	if err != nil {
+		return nil, err
+	}
+	newfid, err := f.c.nextFid()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("<- Twalk tag:%d fid:%d newfid:%d names:%v", tag, f.num, newfid, names)
+	if err = f.c.enc.Twalk(tag, f.num, newfid, names...); err != nil {
+		f.c.deregister(tag)
+		return nil, err
+	}
+
+	var rx proto.Rwalk
+	if err = wait(ch, &rx); err != nil {
+		return nil, err
+	}
+
+	qids := rx.Wqid()
+	log.Printf("-> Rwalk tag:%d qids:%v", tag, qids)
+	fid := &Fid{num: newfid, c: f.c}
+	if len(qids) > 0 {
+		fid.qid = qids[len(qids)-1]
+	}
+	return fid, nil
 }
 
 func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) error {
@@ -360,7 +386,7 @@ func (f *Fid) Remove(ctx context.Context) error {
 }
 
 func (f *Fid) WriteAt(ctx context.Context, data []byte, offset int64) (int, error) {
-	msize := 4 * 8192 // TODO
+	msize := proto.DefaultMaxMessageLen // TODO: should be configurable
 	done := 0
 	n := len(data)
 	first := true
@@ -401,7 +427,7 @@ func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, erro
 }
 
 func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error) {
-	msize := 4 * 8192 // TODO
+	msize := proto.DefaultMaxMessageLen // TODO: should be configurable
 	n := len(data)
 	if n > msize {
 		n = msize
