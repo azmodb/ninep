@@ -118,6 +118,12 @@ func (s *Stat) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+func (s Stat) String() string {
+	return fmt.Sprintf("(%q %q %q %s q %v m %#o at %d mt %d l %d t %d d %d)",
+		s.Name, s.UID, s.GID, s.MUID, s.Qid, s.Mode,
+		s.Atime, s.Mtime, s.Length, s.Type, s.Dev)
+}
+
 // Qid represents the server's unique identification for the file being
 // accessed. Two files on the same server hierarchy are the same if and
 // only if their qids are the same.

@@ -100,8 +100,8 @@ var minSizeLUT = [28]uint32{
 	11,                // size[4] Tremove tag[2] fid[4]
 	7,                 // size[4] Rremove tag[2]
 	11,                // size[4] Tstat tag[2] fid[4]
-	9 + fixedStatLen,  // size[4] Rstat tag[2] stat[n]
-	13 + fixedStatLen, // size[4] Twstat tag[2] fid[4] stat[n]
+	11,                // size[4] Rstat tag[2] stat[n]
+	15,                // size[4] Twstat tag[2] fid[4] stat[n]
 	7,                 // size[4] Rwstat tag[2]
 }
 

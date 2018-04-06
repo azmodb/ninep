@@ -35,8 +35,8 @@ type Encoder interface {
 	Tremove(tag uint16, fid uint32) error
 	Rremove(tag uint16) error
 	Tstat(tag uint16, fid uint32) error
-	//Rstat(tag uint16, stat Stat) error
-	//Twstat(tag uint16, fid uint32, stat Stat) error
+	Rstat(tag uint16, stat Stat) error
+	Twstat(tag uint16, fid uint32, stat Stat) error
 	Rwstat(tag uint16) error
 
 	Rerrorf(tag uint16, format string, args ...interface{}) error
@@ -269,12 +269,21 @@ func (e *encoder) Tstat(tag uint16, fid uint32) error {
 	return e.rfid(msgTstat, tag, fid)
 }
 
-func (e *encoder) Rstat(tag uint16, stat Stat) error {
-	panic("TODO")
+func (e *encoder) Rstat(tag uint16, s Stat) error {
+	size := uint16(s.len())
+	e.pheader(minSize(msgRstat)+uint32(size), msgRstat, tag)
+	e.puint16(2 + size)
+	e.pstat(s, size)
+	return e.err
 }
 
-func (e *encoder) Twstat(tag uint16, fid uint32, stat Stat) error {
-	panic("TODO")
+func (e *encoder) Twstat(tag uint16, fid uint32, s Stat) error {
+	size := uint16(s.len())
+	e.pheader(minSize(msgTwstat)+uint32(size), msgTwstat, tag)
+	e.puint32(fid)
+	e.puint16(2 + size)
+	e.pstat(s, size)
+	return e.err
 }
 
 func (e *encoder) Rwstat(tag uint16) error {
