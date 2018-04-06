@@ -455,6 +455,26 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 	return copy(data, rx.Data()), nil
 }
 
+func (f *Fid) Stat(ctx context.Context) (proto.Stat, error) {
+	tag, ch, err := f.c.register()
+	if err != nil {
+		return proto.Stat{}, err
+	}
+
+	log.Printf("<- Tstat tag:%d fid:%d", tag, f.num)
+	if err = f.c.enc.Tstat(tag, f.num); err != nil {
+		f.c.deregister(tag)
+		return proto.Stat{}, err
+	}
+
+	var rx proto.Rstat
+	if err = wait(ch, &rx); err != nil {
+		return proto.Stat{}, err
+	}
+	log.Printf("-> Rstat tag:%d stat:%v", tag, rx.Stat())
+	return rx.Stat(), nil
+}
+
 func (f *Fid) Close() error {
 	tag, ch, err := f.c.register()
 	if err != nil {
