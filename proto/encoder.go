@@ -115,7 +115,7 @@ func (e *encoder) Tattach(tag uint16, fid, afid uint32, uname, aname string) err
 }
 
 func (e *encoder) rqid(typ uint8, tag uint16, qid Qid) error {
-	e.pheader(minSize(typ), msgRauth, tag)
+	e.pheader(minSize(typ), typ, tag)
 	e.pqid(qid)
 	return e.err
 }
