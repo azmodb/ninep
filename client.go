@@ -137,11 +137,11 @@ func wait(ch <-chan interface{}, rx proto.Message) (err error) {
 // Not part of the API and NOT syncronized.
 func (c *Conn) version(msize uint32, version string) (err error) {
 	ch := make(chan interface{}, 1)
-	c.pending[proto.NOTAG] = ch
+	c.pending[NOTAG] = ch
 
-	log.Printf("<- Tversion tag:%d msize:%d version:%q", proto.NOTAG, msize, version)
-	if err = c.enc.Tversion(proto.NOTAG, msize, version); err != nil {
-		delete(c.pending, proto.NOTAG)
+	log.Printf("<- Tversion tag:%d msize:%d version:%q", NOTAG, msize, version)
+	if err = c.enc.Tversion(NOTAG, msize, version); err != nil {
+		delete(c.pending, NOTAG)
 		return err
 	}
 
@@ -175,7 +175,7 @@ func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, e
 		return nil, err
 	}
 
-	afid := proto.NOFID
+	afid := NOFID
 	if fid != nil {
 		afid = fid.num
 	}
@@ -201,7 +201,7 @@ func (c *Conn) nextFid() (uint32, error) {
 	}
 	if fid == 0 {
 		c.fid++
-		if c.fid == proto.NOFID {
+		if c.fid == NOFID {
 			return 0, errors.New("out of fids")
 		}
 		fid = c.fid
@@ -211,7 +211,7 @@ func (c *Conn) nextFid() (uint32, error) {
 
 func (c *Conn) putFid(fid uint32) {
 	c.mu.Lock()
-	if fid != 0 && fid != proto.NOFID {
+	if fid != 0 && fid != NOFID {
 		c.freefid[fid] = struct{}{}
 	}
 	c.mu.Unlock()
@@ -224,7 +224,7 @@ func (c *Conn) nextTag() (uint16, error) {
 	}
 	if tag == 0 {
 		c.tag++
-		if c.tag == proto.NOTAG {
+		if c.tag == NOTAG {
 			return 0, errors.New("out of tags")
 		}
 		tag = c.tag
@@ -249,7 +249,7 @@ func (c *Conn) register() (uint16, <-chan interface{}, error) {
 
 func (c *Conn) deregister(tag uint16) chan<- interface{} {
 	c.mu.Lock()
-	if tag != 0 && tag != proto.NOTAG {
+	if tag != 0 && tag != NOTAG {
 		c.freetag[tag] = struct{}{}
 	}
 	ch := c.pending[tag]
@@ -391,7 +391,7 @@ func (f *Fid) Remove(ctx context.Context) error {
 	log.Printf("-> Rremove tag:%d", tag)
 
 	f.c.putFid(f.num)
-	f.num = proto.NOFID
+	f.num = NOFID
 	return nil
 }
 

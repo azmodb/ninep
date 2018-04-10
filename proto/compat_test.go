@@ -12,7 +12,7 @@ import (
 var (
 	plan9Dirs = []plan9.Dir{
 		{
-			Type: 0x01, Dev: 42, Qid: plan9.Qid{Type: QTFILE, Vers: 42, Path: 42}, Mode: 42,
+			Type: 0x01, Dev: 42, Qid: plan9.Qid{Type: plan9.QTFILE, Vers: 42, Path: 42}, Mode: 42,
 			Atime: uint32(time.Now().Unix()), Mtime: uint32(time.Now().Unix()), Length: 42,
 			Name: "tmp", Uid: "glenda", Gid: "lab", Muid: "bootes",
 		},

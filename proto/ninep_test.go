@@ -38,7 +38,7 @@ func init() {
 
 func TestQidEncoding(t *testing.T) {
 	for _, in := range []Qid{
-		Qid{Type: QTFILE, Version: 42, Path: 42},
+		Qid{Type: 0x01, Version: 42, Path: 42},
 		maxQid,
 		emptyQid,
 	} {
@@ -62,7 +62,7 @@ func TestQidEncoding(t *testing.T) {
 func TestStatEncoding(t *testing.T) {
 	for _, in := range []Stat{
 		Stat{
-			Type: 0x01, Dev: 42, Qid: Qid{Type: QTFILE, Version: 42, Path: 42},
+			Type: 0x01, Dev: 42, Qid: Qid{Type: 0x01, Version: 42, Path: 42},
 			Mode: 42, Atime: uint32(time.Now().Unix()),
 			Mtime: uint32(time.Now().Unix()), Length: 42,
 			Name: "tmp", UID: "glenda", GID: "lab", MUID: "bootes",
