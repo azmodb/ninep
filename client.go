@@ -13,6 +13,9 @@ import (
 
 type ConnOption func(*Conn) error
 
+// Conn represents an 9P2000 RPC client. There may be multiple outstanding
+// calls associated with a single client, and a client may be used by
+// multiple goroutines simultaneously.
 type Conn struct {
 	enc *encoder // exclusive 9P2000 stream encoder
 	dec proto.Decoder
@@ -28,6 +31,9 @@ type Conn struct {
 	shutdown bool
 }
 
+// Dial connects to an 9P2000 server at the specified network address. For
+// TCP and UDP networks, the address has the form "host:port". For unix
+// networks, the address must be a file system path.
 func Dial(ctx context.Context, network, address string, opts ...ConnOption) (*Conn, error) {
 	conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
 	if err != nil {
@@ -36,6 +42,8 @@ func Dial(ctx context.Context, network, address string, opts ...ConnOption) (*Co
 	return NewConn(conn, opts...)
 }
 
+// NewConn returns a new client to handle requests to the set of services
+// at the other end of the connection.
 func NewConn(rwc io.ReadWriteCloser, opts ...ConnOption) (*Conn, error) {
 	c := &Conn{
 		pending: make(map[uint16]chan<- interface{}),
@@ -55,6 +63,8 @@ func NewConn(rwc io.ReadWriteCloser, opts ...ConnOption) (*Conn, error) {
 	return c, nil
 }
 
+// Close calls the underlying connection Close method. If the connection
+// is already shutting down, an error is returned.
 func (c *Conn) Close() error {
 	c.mu.Lock()
 	if c.closing {
