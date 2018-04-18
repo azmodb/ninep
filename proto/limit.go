@@ -33,8 +33,12 @@ const (
 )
 
 const (
-	// size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
-	// size[4] Tread  tag[2] fid[4] offset[8] count[4]
+	// FixedReadWriteLen is the length of all fixed-width fields in a Twrite
+	// or Tread message. Twrite and Tread messages are defined as
+	//
+	//     size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
+	//     size[4] Tread  tag[2] fid[4] offset[8] count[4]
+	//
 	FixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
 
 	// To make the contents of a directory, such as returned by read(5),
@@ -42,7 +46,7 @@ const (
 	// For consistency, the entries in Twstat and Rstat messages also
 	// contain their size, which means the size appears twice.
 	//
-	//  http://9p.io/magic/man2html/5/stat
+	//     http://9p.io/magic/man2html/5/stat
 	//
 	fixedStatLen = 2 + 4 + 13 + 4 + 4 + 4 + 8 + 4*2 // 47
 
@@ -64,14 +68,22 @@ const (
 
 	maxPathLen = maxWalkElem + maxWalkElem*maxNameLen // 4096 bytes
 
+	// MaxMessageLen is the maximum size of a 9P2000 message.
 	MaxMessageLen = (FixedReadWriteLen + 1) + MaxDataLen
-	MaxDataLen    = (1<<31 - 1) - (FixedReadWriteLen + 1) // ~ 2GB
 
+	// MaxDataLen is the maximum data size of a Twrite or Rread message.
+	MaxDataLen = (1<<31 - 1) - (FixedReadWriteLen + 1) // ~ 2GB
+
+	// DefaultMaxMessageLen is the default maximum size of a 9P2000
+	// message.
 	DefaultMaxMessageLen = (FixedReadWriteLen + 1) + DefaultMaxDataLen
 
+	// DefaultMaxDataLen is the default maximum data size of a Twrite or
+	// Rread message.
 	DefaultMaxDataLen = 2 * 1024 * 1024
 )
 
+// Version defines the supported protocol version.
 const Version = "9P2000"
 
 var minSizeLUT = [28]uint32{
