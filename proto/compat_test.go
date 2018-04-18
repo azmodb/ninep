@@ -177,7 +177,7 @@ func TestStatCompat(t *testing.T) {
 
 		s := Stat{}
 		if err = s.UnmarshalBinary(data); err != nil {
-			t.Fatal("compat dir %d: unmarshal stat failed: %v", i, err)
+			t.Fatalf("compat dir %d: unmarshal stat failed: %v", i, err)
 		}
 
 		cmpDirStat(t, dir, s)
@@ -198,15 +198,15 @@ func TestRstatFcallCompat(t *testing.T) {
 
 		s := Stat{}
 		if err = s.UnmarshalBinary(fcall.Stat); err != nil {
-			t.Fatal("compat Rstat fcall %d: unmarshal stat failed: %v", i, err)
+			t.Fatalf("compat Rstat fcall %d: unmarshal stat failed: %v", i, err)
 		}
 
 		data, err := fcall.Bytes()
 		if err != nil {
-			t.Fatal("compat Rstat fcall %d: marshal fcall failed: %v", i, err)
+			t.Fatalf("compat Rstat fcall %d: marshal fcall failed: %v", i, err)
 		}
 		if err = enc.Rstat(fcall.Tag, s); err != nil {
-			t.Fatal("compat Rstat fcall %d: encode failed: %v", i, err)
+			t.Fatalf("compat Rstat fcall %d: encode failed: %v", i, err)
 		}
 		if !bytes.Equal(data, buf) {
 			t.Fatalf("compat Rstat %d: messages differ\nexpected %q\nhave     %q", i, data, buf)
@@ -229,15 +229,15 @@ func TestTwstatFcallCompat(t *testing.T) {
 
 		s := Stat{}
 		if err = s.UnmarshalBinary(fcall.Stat); err != nil {
-			t.Fatal("compat Twstat fcall %d: unmarshal stat failed: %v", i, err)
+			t.Fatalf("compat Twstat fcall %d: unmarshal stat failed: %v", i, err)
 		}
 
 		data, err := fcall.Bytes()
 		if err != nil {
-			t.Fatal("compat Twstat fcall %d: marshal fcall failed: %v", i, err)
+			t.Fatalf("compat Twstat fcall %d: marshal fcall failed: %v", i, err)
 		}
 		if err = enc.Twstat(fcall.Tag, fcall.Fid, s); err != nil {
-			t.Fatal("compat Twstat fcall %d: encode failed: %v", i, err)
+			t.Fatalf("compat Twstat fcall %d: encode failed: %v", i, err)
 		}
 		if !bytes.Equal(data, buf) {
 			t.Fatalf("compat Twstat %d: messages differ\nexpected %q\nhave     %q", i, data, buf)
