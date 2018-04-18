@@ -46,6 +46,7 @@ type Encoder interface {
 	MaxMessageSize() uint32
 }
 
+// Option configures how to set up an Encoder/Decoder.
 type Option func(interface{})
 
 type encoder struct {
