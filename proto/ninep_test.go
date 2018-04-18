@@ -1,115 +1,101 @@
 package proto
 
 import (
-	"bytes"
 	"math"
+	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 )
 
 var (
-	testStats = []Stat{
-		{
-			Type:   math.MaxUint16,
-			Dev:    math.MaxUint16,
-			Qid:    testQids[0],
-			Mode:   math.MaxUint32,
-			Atime:  math.MaxUint32,
-			Mtime:  math.MaxUint32,
-			Length: math.MaxUint64,
-			Name:   "/tmp",
-			Uid:    "glenda",
-			Gid:    "lab",
-			Muid:   "bootes",
-		},
-		{
-			Type:   0x01,
-			Dev:    42,
-			Qid:    testQids[1],
-			Mode:   42,
-			Atime:  uint32(time.Now().Unix()),
-			Mtime:  uint32(time.Now().Unix()),
-			Length: math.MaxUint32,
-			Name:   "/tmp",
-			Uid:    "glenda",
-			Gid:    "lab",
-			Muid:   "bootes",
-		},
-		{},
-	}
-	testQids = []Qid{
-		{
-			Type:    math.MaxUint8,
-			Version: math.MaxUint32,
-			Path:    math.MaxUint64,
-		},
-		{
-			Type:    0x01,
-			Version: 42,
-			Path:    42,
-		},
-		{},
-	}
+	maxQid   = Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}
+	emptyQid = Qid{}
+
+	emptyStat = Stat{}
+
+	maxVersionStr string
+	maxUnameStr   string
+	maxNameStr    string
 )
 
-func TestQidMarshalUnmarshalBinary(t *testing.T) {
-	for i, in := range testQids {
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func randString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	maxVersionStr = randString(maxVersionLen)
+	maxUnameStr = randString(maxUnameLen)
+	maxNameStr = randString(maxNameLen)
+}
+
+func TestQidEncoding(t *testing.T) {
+	for _, in := range []Qid{
+		Qid{Type: 0x01, Version: 42, Path: 42},
+		maxQid,
+		emptyQid,
+	} {
 		data, err := in.MarshalBinary()
 		if err != nil {
-			t.Fatalf("binary#%d: cannot marshal qid: %v", i, err)
+			t.Fatalf("qid: marshal failed: %v", err)
 		}
 
 		out := Qid{}
-		if err = out.UnmarshalBinary(data); err != nil {
-			t.Fatalf("binary#%d: cannot unmarshal qid: %v", i, err)
+		err = out.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("qid: unmarshal failed: %v", err)
 		}
 
 		if !reflect.DeepEqual(in, out) {
-			t.Fatalf("binary#%d: in/out differ:\n%s\n%s", i, in, out)
+			t.Fatalf("qid: expected %+v, got %+v", in, out)
 		}
 	}
 }
 
-func TestStatMarshalUnmarshalBinary(t *testing.T) {
-	for i, in := range testStats {
+func TestStatEncoding(t *testing.T) {
+	for _, in := range []Stat{
+		Stat{
+			Type: 0x01, Dev: 42, Qid: Qid{Type: 0x01, Version: 42, Path: 42},
+			Mode: 42, Atime: uint32(time.Now().Unix()),
+			Mtime: uint32(time.Now().Unix()), Length: 42,
+			Name: "tmp", UID: "glenda", GID: "lab", MUID: "bootes",
+		},
+		Stat{
+			Type: math.MaxUint16, Dev: math.MaxUint16, Qid: maxQid,
+			Mode: math.MaxUint32, Atime: math.MaxUint32,
+			Mtime: math.MaxUint32, Length: math.MaxUint64,
+			Name: maxNameStr, UID: maxUnameStr, GID: maxUnameStr,
+			MUID: maxUnameStr,
+		},
+		emptyStat,
+	} {
 		data, err := in.MarshalBinary()
 		if err != nil {
-			t.Fatalf("binary#%d: cannot marshal stat: %v", i, err)
+			t.Fatalf("stat: marshal failed: %v", err)
 		}
 
 		out := Stat{}
-		if err = out.UnmarshalBinary(data); err != nil {
-			t.Fatalf("binary#%d: cannot unmarshal stat: %v", i, err)
+		err = out.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("stat: unmarshal failed: %v", err)
 		}
 
 		if !reflect.DeepEqual(in, out) {
-			t.Fatalf("binary#%d: in/out differ:\n%s\n%s", i, in, out)
+			t.Fatalf("stat: expected %+v, got %+v", in, out)
 		}
 	}
 }
 
-func TestStatMarshalEncoderCompatiblity(t *testing.T) {
-	buf := &bytes.Buffer{}
-	enc := newEncoder(buf)
-
-	for i, stat := range testStats {
-		buf.Reset()
-
-		strLen := len(stat.Name) + len(stat.Uid) + len(stat.Gid) + len(stat.Muid)
-		statLen := uint16(fixedStatLen + strLen)
-		enc.pstat(stat, statLen)
-		if err := enc.Flush(); err != nil {
-			t.Fatalf("compat#%d: cannot encode stat structure: %v", i, err)
-		}
-
-		data, err := stat.MarshalBinary()
-		if err != nil {
-			t.Fatalf("compat#%d: cannot marshal stat structure: %v", i, err)
-		}
-
-		if !bytes.Equal(buf.Bytes(), data) {
-			t.Fatalf("compare#%d: encode and marshal result differ\n%q\n%q", i, buf.Bytes(), data)
-		}
+func TestStatLimit(t *testing.T) {
+	s := Stat{}
+	if s.len() != fixedStatLen {
+		t.Fatalf("stat: expected empty len %d, have %d", fixedStatLen, s.len())
 	}
 }

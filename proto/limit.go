@@ -1,11 +1,5 @@
 package proto
 
-import (
-	"unicode/utf8"
-
-	"bytes"
-)
-
 // Based on http://9p.io/sources/plan9/sys/include/fcall.h
 const (
 	msgTversion = iota + 100 // size[4] Tversion tag[2] msize[4] version[s]
@@ -38,6 +32,60 @@ const (
 	msgRwstat                // size[4] Rwstat tag[2]
 )
 
+const (
+	// FixedReadWriteLen is the length of all fixed-width fields in a Twrite
+	// or Tread message. Twrite and Tread messages are defined as
+	//
+	//     size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
+	//     size[4] Tread  tag[2] fid[4] offset[8] count[4]
+	//
+	FixedReadWriteLen = 4 + 1 + 2 + 4 + 8 + 4 // 23
+
+	// To make the contents of a directory, such as returned by read(5),
+	// easy to parse, each directory entry begins with a size field.
+	// For consistency, the entries in Twstat and Rstat messages also
+	// contain their size, which means the size appears twice.
+	//
+	//     http://9p.io/magic/man2html/5/stat
+	//
+	fixedStatLen = 2 + 4 + 13 + 4 + 4 + 4 + 8 + 4*2 // 47
+
+	headerLen = 7 // size[4] type[1] tag[2]
+
+	// maxVersionLen is the length (in bytes) of a version identiefier.
+	maxVersionLen = 8
+
+	// maxUnameLen is the maximum length (in bytes) of a username or
+	// group identifier.
+	maxUnameLen = 255
+
+	// maxNameLen is the maximum length of a file name in bytes.
+	maxNameLen = 255
+
+	// maxWalkElem is the maximum allowed number of path elements in a
+	// Twalk request.
+	maxWalkElem = 16
+
+	maxPathLen = maxWalkElem + maxWalkElem*maxNameLen // 4096 bytes
+
+	// MaxMessageLen is the maximum size of a 9P2000 message.
+	MaxMessageLen = (FixedReadWriteLen + 1) + MaxDataLen
+
+	// MaxDataLen is the maximum data size of a Twrite or Rread message.
+	MaxDataLen = (1<<31 - 1) - (FixedReadWriteLen + 1) // ~ 2GB
+
+	// DefaultMaxMessageLen is the default maximum size of a 9P2000
+	// message.
+	DefaultMaxMessageLen = (FixedReadWriteLen + 1) + DefaultMaxDataLen
+
+	// DefaultMaxDataLen is the default maximum data size of a Twrite or
+	// Rread message.
+	DefaultMaxDataLen = 2 * 1024 * 1024
+)
+
+// Version defines the supported protocol version.
+const Version = "9P2000"
+
 var minSizeLUT = [28]uint32{
 	13,                // size[4] Tversion tag[2] msize[4] version[s]
 	13,                // size[4] Rversion tag[2] mversion[s]
@@ -55,113 +103,18 @@ var minSizeLUT = [28]uint32{
 	24,                // size[4] Ropen tag[2] qid[13] iounit[4]
 	18,                // size[4] Tcreate tag[2] fid[4] name[s] perm[4] mode[1]
 	24,                // size[4] Rcreate tag[2] qid[13] iounit[4]
-	fixedReadWriteLen, // size[4] Tread tag[2] fid[4] offset[8] count[4]
+	FixedReadWriteLen, // size[4] Tread tag[2] fid[4] offset[8] count[4]
 	11,                // size[4] Rread tag[2] count[4] data[count]
-	fixedReadWriteLen, // size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
+	FixedReadWriteLen, // size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 	11,                // size[4] Rwrite tag[2] count[4]
 	11,                // size[4] Tclunk tag[2] fid[4]
 	7,                 // size[4] Rclunk tag[2]
 	11,                // size[4] Tremove tag[2] fid[4]
 	7,                 // size[4] Rremove tag[2]
 	11,                // size[4] Tstat tag[2] fid[4]
-	11 + fixedStatLen, // size[4] Rstat tag[2] stat[n]
-	15 + fixedStatLen, // size[4] Twstat tag[2] fid[4] stat[n]
+	11,                // size[4] Rstat tag[2] stat[n]
+	15,                // size[4] Twstat tag[2] fid[4] stat[n]
 	7,                 // size[4] Rwstat tag[2]
 }
 
-var minSizeLUT64 [28]int64
-
-func init() {
-	for i, s := range minSizeLUT {
-		minSizeLUT64[i] = int64(s)
-	}
-}
-
-const (
-	errElemInvalidUTF8 = Error("path element name is not valid utf8")
-	errMaxNames        = Error("maximum walk elements exceeded")
-	errElemTooLarge    = Error("path element name too large")
-	errPathTooLarge    = Error("file tree name too large")
-	errPathName        = Error("separator in path element")
-
-	errUnameInvalidUTF8   = Error("username is not valid utf8")
-	errUnameTooLarge      = Error("username is too large")
-	errVersionInvalidUTF8 = Error("version is not valid utf8")
-	errVersionTooLarge    = Error("version is too large")
-
-	errDataTooLarge = Error("maximum data bytes exeeded")
-
-	errMaxName = Error("maximum walk elements exceeded")
-
-	errInvalidMessageType = Error("invalid message type")
-	errMessageTooLarge    = Error("message too large")
-	errMessageTooSmall    = Error("message too small")
-)
-
-// Logger represents an active logging object that generates lines of
-// output.
-type Logger interface {
-	// Printf formats according to a format specifier and should write
-	// to standard error.
-	Printf(format string, args ...interface{})
-}
-
-var separator = []byte("/")
-
-const separatorByte = '/'
-
-func verifyUname(uname []byte) error {
-	if len(uname) > maxUnameLen {
-		return errUnameTooLarge
-	}
-	if !utf8.Valid(uname) {
-		return errUnameInvalidUTF8
-	}
-	return nil
-}
-
-func verifyVersion(version []byte) error {
-	if len(version) > maxVersionLen {
-		return errVersionTooLarge
-	}
-	if !utf8.Valid(version) {
-		return errVersionInvalidUTF8
-	}
-	return nil
-}
-
-func verifyName(name []byte) error {
-	if len(name) > maxNameLen {
-		return errElemTooLarge
-	}
-	if !utf8.Valid(name) {
-		return errElemInvalidUTF8
-	}
-	if bytes.Contains(name, separator) {
-		return errPathName
-	}
-	return nil
-}
-
-func verifyPath(name []byte) (err error) {
-	for len(name) > 0 && name[0] == separatorByte {
-		name = name[1:]
-	}
-	if len(name) == 0 {
-		return nil
-	}
-	if len(name) > maxPathLen {
-		return errPathTooLarge
-	}
-	if bytes.Count(name, separator) > maxName {
-		return errMaxNames
-	}
-
-	elems := bytes.Split(name, separator)
-	for _, elem := range elems {
-		if err = verifyName(elem); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+func minSize(typ uint8) uint32 { return minSizeLUT[typ-100] }
