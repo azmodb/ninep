@@ -5,29 +5,18 @@ import (
 	"io"
 )
 
-// Error represents a 9P2000 protocol error.
-type Error string
+// Message represents a 9P2000 message and is used to access fields common
+// to all 9P2000 messages.
+type Message interface {
+	// Len returns the four byte size field specifying the length in bytes
+	// of the complete message including the four bytes of the size field
+	// itself.
+	Len() int64
 
-func (e Error) Error() string { return string(e) }
-
-const (
-	errElemInvalidUTF8 = Error("path element name is not valid utf8")
-	errMaxWalkElem     = Error("maximum walk elements exceeded")
-	errElemTooLarge    = Error("path element name too large")
-	errPathTooLarge    = Error("file tree name too large")
-	errPathName        = Error("separator in path element")
-
-	errVersionInvalidUTF8 = Error("version is not valid utf8")
-	errVersionTooLarge    = Error("version is too large")
-	errUnameInvalidUTF8   = Error("username is not valid utf8")
-	errUnameTooLarge      = Error("username is too large")
-
-	errDataTooLarge = Error("maximum data bytes exeeded")
-
-	errInvalidMessageType = Error("invalid message type")
-	errMessageTooLarge    = Error("message too large")
-	errMessageTooSmall    = Error("message too small")
-)
+	// Tag returns the field choosen by the client to identify the
+	// message.
+	Tag() uint16
+}
 
 // Stat describes a directory entry. It is contained in Rstat and Twstat
 // messages. Tread requests on directories return a Stat structure for
@@ -79,6 +68,19 @@ func (s Stat) String() string {
 		s.Atime, s.Mtime, s.Length, s.Type, s.Dev)
 }
 
+// Qid type field represents the type of a file (directory, etc.),
+// represented as a bit vector corresponding to the high 8 bits of the
+// file mode word.
+const (
+	QTDIR    = 0x80 // directories
+	QTAPPEND = 0x40 // append only files
+	QTEXCL   = 0x20 // exclusive use files
+	QTMOUNT  = 0x10 // mounted channel
+	QTAUTH   = 0x08 // authentication file (afid)
+	QTTMP    = 0x04 // non-backed-up file
+	QTFILE   = 0x00
+)
+
 // Qid represents the server's unique identification for the file being
 // accessed. Two files on the same server hierarchy are the same if and
 // only if their qids are the same.
@@ -120,39 +122,48 @@ func (q *Qid) UnmarshalBinary(data []byte) error {
 }
 
 func (q Qid) String() string {
-	/*
-		t := ""
-		if q.Type&QTDIR != 0 {
-			t += "d"
-		}
-		if q.Type&QTAPPEND != 0 {
-			t += "a"
-		}
-		if q.Type&QTEXCL != 0 {
-			t += "l"
-		}
-		if q.Type&QTMOUNT != 0 {
-			t += "m"
-		}
-		if q.Type&QTAUTH != 0 {
-			t += "A"
-		}
-		if q.Type&QTTMP != 0 {
-			t += "t"
-		}
-	*/
-	return fmt.Sprintf("(%.16x %d %d)", q.Path, q.Version, q.Type)
+	t := ""
+	if q.Type&QTDIR != 0 {
+		t += "d"
+	}
+	if q.Type&QTAPPEND != 0 {
+		t += "a"
+	}
+	if q.Type&QTEXCL != 0 {
+		t += "l"
+	}
+	if q.Type&QTMOUNT != 0 {
+		t += "m"
+	}
+	if q.Type&QTAUTH != 0 {
+		t += "A"
+	}
+	if q.Type&QTTMP != 0 {
+		t += "t"
+	}
+	return fmt.Sprintf("(%.16x %d %q)", q.Path, q.Version, t)
 }
 
-// Message represents a 9P2000 message and is used to access fields common
-// to all 9P2000 messages.
-type Message interface {
-	// Len returns the four byte size field specifying the length in bytes
-	// of the complete message including the four bytes of the size field
-	// itself.
-	Len() int64
+// Error represents a 9P2000 protocol error.
+type Error string
 
-	// Tag returns the field choosen by the client to identify the
-	// message.
-	Tag() uint16
-}
+func (e Error) Error() string { return string(e) }
+
+const (
+	errElemInvalidUTF8 = Error("path element name is not valid utf8")
+	errMaxWalkElem     = Error("maximum walk elements exceeded")
+	errElemTooLarge    = Error("path element name too large")
+	errPathTooLarge    = Error("file tree name too large")
+	errPathName        = Error("separator in path element")
+
+	errVersionInvalidUTF8 = Error("version is not valid utf8")
+	errVersionTooLarge    = Error("version is too large")
+	errUnameInvalidUTF8   = Error("username is not valid utf8")
+	errUnameTooLarge      = Error("username is too large")
+
+	errDataTooLarge = Error("maximum data bytes exeeded")
+
+	errInvalidMessageType = Error("invalid message type")
+	errMessageTooLarge    = Error("message too large")
+	errMessageTooSmall    = Error("message too small")
+)
