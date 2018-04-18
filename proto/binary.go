@@ -134,7 +134,7 @@ func gheader(b []byte, msize int64) (uint32, uint8, error) {
 func gstat(b []byte) (s Stat) {
 	s.Type = guint16(b[2:4])
 	s.Dev = guint32(b[4:8])
-	s.Qid.UnmarshalBinary(b[8:21])
+	s.Qid = gqid(b[8:21])
 	s.Mode = guint32(b[21:25])
 	s.Atime = guint32(b[25:29])
 	s.Mtime = guint32(b[29:33])
