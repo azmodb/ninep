@@ -11,15 +11,14 @@ import (
 	"github.com/azmodb/ninep/proto"
 )
 
-type ConnOption func(*Conn) error
-
 // Conn represents an 9P2000 RPC client. There may be multiple outstanding
 // calls associated with a single client, and a client may be used by
 // multiple goroutines simultaneously.
 type Conn struct {
-	enc *encoder // exclusive 9P2000 stream encoder
-	dec proto.Decoder
-	c   io.Closer
+	enc   *encoder // exclusive 9P2000 stream encoder
+	dec   proto.Decoder
+	c     io.Closer
+	msize int
 
 	mu       sync.Mutex // protects following
 	pending  map[uint16]chan<- interface{}
@@ -31,11 +30,14 @@ type Conn struct {
 	shutdown bool
 }
 
+// ConnOption configures how we set up the connection.
+type ConnOption func(*Conn) error
+
 // Dial connects to an 9P2000 server at the specified network address. For
 // TCP and UDP networks, the address has the form "host:port". For unix
 // networks, the address must be a file system path.
-func Dial(ctx context.Context, network, address string, opts ...ConnOption) (*Conn, error) {
-	conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
+func Dial(ctx context.Context, network, addr string, opts ...ConnOption) (*Conn, error) {
+	conn, err := (&net.Dialer{}).DialContext(ctx, network, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +135,6 @@ func wait(ch <-chan interface{}, rx proto.Message) (err error) {
 
 // version request negotiates the protocol version and message size to
 // be used on the connection and initializes the connection for I/O.
-//
-// Not part of the API and NOT syncronized.
 func (c *Conn) version(msize uint32, version string) (err error) {
 	ch := make(chan interface{}, 1)
 	c.pending[NOTAG] = ch
@@ -150,21 +150,32 @@ func (c *Conn) version(msize uint32, version string) (err error) {
 		return err
 	}
 
-	if rx.Msize() > c.dec.MaxMessageSize() {
+	msize = rx.Msize()
+	if msize > c.dec.MaxMessageSize() {
 		return errors.New("invalid msize in version response")
 	}
-	if rx.Msize() != c.dec.MaxMessageSize() {
-		c.enc.SetMaxMessageSize(rx.Msize())
-		c.dec.SetMaxMessageSize(rx.Msize())
+	if msize != c.dec.MaxMessageSize() {
+		c.enc.SetMaxMessageSize(msize)
+		c.dec.SetMaxMessageSize(msize)
 	}
-	log.Printf("-> Rversion tag:%d msize:%d version:%q", rx.Tag(), rx.Msize(), rx.Version())
+	c.msize = int(msize)
+
+	log.Printf("-> Rversion tag:%d msize:%d version:%q", rx.Tag(), msize, rx.Version())
 	return nil
 }
 
+// Auth is used to authenticate users on a connection. If the server does
+// require authentication, it returns a fid defining a file of type
+// proto.QTAUTH that may be read and written to execute an authentication
+// protocol. That protocol's definition is not part of 9P2000 itself.
 func (c *Conn) Auth(ctx context.Context, user, root string) (*Fid, error) {
 	panic("not implemented")
 }
 
+// Access identifies the user (uname) and may select the file tree to
+// access (aname). The afid argument specifies a fid previously
+// established by an auth message. Access returns the root directory of
+// the desired file tree.
 func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, error) {
 	tag, ch, err := c.register()
 	if err != nil {
@@ -190,13 +201,15 @@ func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, e
 	if err = wait(ch, &rx); err != nil {
 		return nil, err
 	}
-	log.Printf("-> Rattach tag:%d qid:%s", tag, rx.Qid())
-	return &Fid{num: num, qid: rx.Qid(), c: c}, err
+
+	f := &Fid{num: num, qid: rx.Qid(), c: c}
+	log.Printf("-> Rattach tag:%d qid:%s", tag, f.qid)
+	return f, err
 }
 
 func (c *Conn) nextFid() (uint32, error) {
 	var fid uint32
-	for fid, _ = range c.freefid {
+	for fid = range c.freefid {
 		delete(c.freefid, fid)
 	}
 	if fid == 0 {
@@ -219,7 +232,7 @@ func (c *Conn) putFid(fid uint32) {
 
 func (c *Conn) nextTag() (uint16, error) {
 	var tag uint16
-	for tag, _ = range c.freetag {
+	for tag = range c.freetag {
 		delete(c.freetag, tag)
 	}
 	if tag == 0 {
@@ -294,6 +307,8 @@ func (c *Conn) recv() {
 	c.enc.mu.Unlock()
 }
 
+// Fid identifies a file on the file server. A new Fid is created when
+// the user attaches to the file server, or when walking to a file.
 type Fid struct {
 	qid proto.Qid
 	num uint32
@@ -330,14 +345,14 @@ func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
 	return fid, nil
 }
 
-func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) error {
+func (f *Fid) Create(ctx context.Context, name string, mode uint8, perm Perm) error {
 	tag, ch, err := f.c.register()
 	if err != nil {
 		return err
 	}
 
-	log.Printf("<- Tcreate tag:%d fid:%d name:%q perm:%d mode:%d", tag, f.num, name, perm, mode)
-	if err = f.c.enc.Tcreate(tag, f.num, name, perm, mode); err != nil {
+	log.Printf("<- Tcreate tag:%d fid:%d name:%q perm:%q mode:%d", tag, f.num, name, perm, mode)
+	if err = f.c.enc.Tcreate(tag, f.num, name, uint32(perm), mode); err != nil {
 		f.c.deregister(tag)
 		return err
 	}
@@ -347,7 +362,7 @@ func (f *Fid) Create(ctx context.Context, name string, perm uint32, mode uint8) 
 		return err
 	}
 	f.qid = rx.Qid()
-	log.Printf("-> Rcreate tag:%d qid:%s iounit:%d", tag, rx.Qid(), rx.Iounit())
+	log.Printf("-> Rcreate tag:%d qid:%s iounit:%d", tag, f.qid, rx.Iounit())
 
 	return nil
 }
@@ -368,7 +383,8 @@ func (f *Fid) Open(ctx context.Context, mode uint8) error {
 	if err = wait(ch, &rx); err != nil {
 		return err
 	}
-	log.Printf("-> Ropen tag:%d qid:%s iounit:%d", tag, rx.Qid(), rx.Iounit())
+	f.qid = rx.Qid()
+	log.Printf("-> Ropen tag:%d qid:%s iounit:%d", tag, f.qid, rx.Iounit())
 	return nil
 }
 
@@ -396,14 +412,12 @@ func (f *Fid) Remove(ctx context.Context) error {
 }
 
 func (f *Fid) WriteAt(ctx context.Context, data []byte, offset int64) (int, error) {
-	msize := proto.DefaultMaxMessageLen // TODO: should be configurable
-	done := 0
-	n := len(data)
+	done, n := 0, len(data)
 	first := true
 	for done < n || first {
 		want := n - done
-		if want > msize {
-			want = msize
+		if want > f.c.msize {
+			want = f.c.msize
 		}
 		m, err := f.writeAt(ctx, data[done:done+want], offset)
 		done += m
@@ -432,15 +446,15 @@ func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, erro
 	if err = wait(ch, &rx); err != nil {
 		return 0, err
 	}
-	log.Printf("-> Rwrite tag:%d count:%d", tag, rx.Count())
-	return int(rx.Count()), nil
+	count := int(rx.Count())
+	log.Printf("-> Rwrite tag:%d count:%d", tag, count)
+	return count, nil
 }
 
 func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error) {
-	msize := proto.DefaultMaxMessageLen // TODO: should be configurable
 	n := len(data)
-	if n > msize {
-		n = msize
+	if n > f.c.msize {
+		n = f.c.msize
 	}
 
 	tag, ch, err := f.c.register()
@@ -458,13 +472,16 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 	if err = wait(ch, &rx); err != nil {
 		return 0, err
 	}
-	if len(rx.Data()) == 0 {
+	count := len(rx.Data())
+	if count == 0 {
 		return 0, io.EOF
 	}
-	log.Printf("-> Rread tag:%d count:%d", tag, len(rx.Data()))
+	log.Printf("-> Rread tag:%d count:%d", tag, count)
 	return copy(data, rx.Data()), nil
 }
 
+// Stat inquires about the file identified by fid. The reply will contain
+// a machine-independent directory entry.
 func (f *Fid) Stat(ctx context.Context) (proto.Stat, error) {
 	tag, ch, err := f.c.register()
 	if err != nil {
@@ -481,10 +498,13 @@ func (f *Fid) Stat(ctx context.Context) (proto.Stat, error) {
 	if err = wait(ch, &rx); err != nil {
 		return proto.Stat{}, err
 	}
-	log.Printf("-> Rstat tag:%d stat:%v", tag, rx.Stat())
-	return rx.Stat(), nil
+	stat := rx.Stat()
+	log.Printf("-> Rstat tag:%d stat:%v", tag, stat)
+	return stat, nil
 }
 
+// Close informs the file server that the current file is no longer
+// needed by the client.
 func (f *Fid) Close() error {
 	tag, ch, err := f.c.register()
 	if err != nil {

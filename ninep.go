@@ -32,15 +32,61 @@ const (
 	DMEXEC   = 0x1        // mode bit for execute permission
 )
 
-// Qid type field represents the type of a file (directory, etc.),
-// represented as a bit vector corresponding to the high 8 bits of the
-// file mode word.
-const (
-	QTDIR    = 0x80 // directories
-	QTAPPEND = 0x40 // append only files
-	QTEXCL   = 0x20 // exclusive use files
-	QTMOUNT  = 0x10 // mounted channel
-	QTAUTH   = 0x08 // authentication file (afid)
-	QTTMP    = 0x04 // non-backed-up file
-	QTFILE   = 0x00
-)
+// Copied from https://github.com/9fans/go/blob/master/plan9/dir.go
+
+// Perm represents file/directory permissions.
+type Perm uint32
+
+type permChar struct {
+	bit Perm
+	c   int
+}
+
+var permChars = []permChar{
+	permChar{DMDIR, 'd'},
+	permChar{DMAPPEND, 'a'},
+	permChar{DMAUTH, 'A'},
+	//permChar{DMDEVICE, 'D'},
+	//permChar{DMSOCKET, 'S'},
+	//permChar{DMNAMEDPIPE, 'P'},
+	permChar{0, '-'},
+	permChar{DMEXCL, 'l'},
+	//permChar{DMSYMLINK, 'L'},
+	permChar{0, '-'},
+	permChar{0400, 'r'},
+	permChar{0, '-'},
+	permChar{0200, 'w'},
+	permChar{0, '-'},
+	permChar{0100, 'x'},
+	permChar{0, '-'},
+	permChar{0040, 'r'},
+	permChar{0, '-'},
+	permChar{0020, 'w'},
+	permChar{0, '-'},
+	permChar{0010, 'x'},
+	permChar{0, '-'},
+	permChar{0004, 'r'},
+	permChar{0, '-'},
+	permChar{0002, 'w'},
+	permChar{0, '-'},
+	permChar{0001, 'x'},
+	permChar{0, '-'},
+}
+
+func (p Perm) String() string {
+	s := ""
+	did := false
+	for _, pc := range permChars {
+		if p&pc.bit != 0 {
+			did = true
+			s += string(pc.c)
+		}
+		if pc.bit == 0 {
+			if !did {
+				s += string(pc.c)
+			}
+			did = false
+		}
+	}
+	return s
+}
