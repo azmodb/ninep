@@ -177,11 +177,7 @@ func (c *Conn) Auth(ctx context.Context, user, root string) (*Fid, error) {
 // established by an auth message. Access returns the root directory of
 // the desired file tree.
 func (c *Conn) Access(ctx context.Context, fid *Fid, user, root string) (*Fid, error) {
-	tag, ch, err := c.register()
-	if err != nil {
-		return nil, err
-	}
-	num, err := c.nextFid()
+	tag, num, ch, err := c.register(true)
 	if err != nil {
 		return nil, err
 	}
@@ -245,19 +241,26 @@ func (c *Conn) nextTag() (uint16, error) {
 	return tag, nil
 }
 
-func (c *Conn) register() (uint16, <-chan interface{}, error) {
+func (c *Conn) register(needFid bool) (uint16, uint32, <-chan interface{}, error) {
+	var fid uint32
 	c.mu.Lock()
 	tag, err := c.nextTag()
 	if err != nil {
 		c.mu.Unlock()
-		return 0, nil, err
+		return 0, 0, nil, err
+	}
+	if needFid {
+		if fid, err = c.nextFid(); err != nil {
+			c.mu.Unlock()
+			return 0, 0, nil, err
+		}
 	}
 
 	ch := make(chan interface{}, 1)
 	c.pending[tag] = ch
 	c.mu.Unlock()
 
-	return tag, ch, nil
+	return tag, fid, ch, nil
 }
 
 func (c *Conn) deregister(tag uint16) chan<- interface{} {
@@ -315,12 +318,10 @@ type Fid struct {
 	c   *Conn
 }
 
+func (f *Fid) Qid() proto.Qid { return f.qid }
+
 func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
-	tag, ch, err := f.c.register()
-	if err != nil {
-		return nil, err
-	}
-	newfid, err := f.c.nextFid()
+	tag, newfid, ch, err := f.c.register(true)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +347,7 @@ func (f *Fid) Walk(ctx context.Context, names ...string) (*Fid, error) {
 }
 
 func (f *Fid) Create(ctx context.Context, name string, mode uint8, perm Perm) error {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return err
 	}
@@ -368,7 +369,7 @@ func (f *Fid) Create(ctx context.Context, name string, mode uint8, perm Perm) er
 }
 
 func (f *Fid) Open(ctx context.Context, mode uint8) error {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return err
 	}
@@ -389,7 +390,7 @@ func (f *Fid) Open(ctx context.Context, mode uint8) error {
 }
 
 func (f *Fid) Remove(ctx context.Context) error {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return err
 	}
@@ -431,7 +432,7 @@ func (f *Fid) WriteAt(ctx context.Context, data []byte, offset int64) (int, erro
 }
 
 func (f *Fid) writeAt(ctx context.Context, data []byte, offset int64) (int, error) {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return 0, err
 	}
@@ -457,7 +458,7 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 		n = f.c.msize
 	}
 
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return 0, err
 	}
@@ -483,7 +484,7 @@ func (f *Fid) ReadAt(ctx context.Context, data []byte, offset int64) (int, error
 // Stat inquires about the file identified by fid. The reply will contain
 // a machine-independent directory entry.
 func (f *Fid) Stat(ctx context.Context) (proto.Stat, error) {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return proto.Stat{}, err
 	}
@@ -506,7 +507,7 @@ func (f *Fid) Stat(ctx context.Context) (proto.Stat, error) {
 // Close informs the file server that the current file is no longer
 // needed by the client.
 func (f *Fid) Close() error {
-	tag, ch, err := f.c.register()
+	tag, _, ch, err := f.c.register(false)
 	if err != nil {
 		return err
 	}
