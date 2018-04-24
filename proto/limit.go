@@ -82,7 +82,7 @@ const (
 	// Rread message.
 	DefaultMaxDataLen = 2 * 1024 * 1024
 
-	// MinMessageLen is the minimum size of a  9P2000 message.
+	// MinMessageLen is the minimum size of a 9P2000 message.
 	MinMessageLen = 17 + MaxPathLen
 )
 
