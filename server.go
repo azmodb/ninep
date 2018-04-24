@@ -15,16 +15,18 @@ var (
 	errInvalidRequest        = errors.New("invalid request")
 )
 
+type ServerOption func(*Server) error
+
 type Server struct {
 	fs    FileSystem
 	msize uint32
 }
 
-func NewServer(fs FileSystem, msize uint32) *Server {
-	if msize < proto.MinMessageLen {
-		msize = proto.DefaultMaxMessageLen
-	}
-	return &Server{fs: fs, msize: msize}
+func NewServer(fs FileSystem, opts ...ServerOption) (*Server, error) {
+	//if msize < proto.MinMessageLen {
+	//	msize = proto.DefaultMaxMessageLen
+	//}
+	return &Server{fs: fs, msize: proto.DefaultMaxMessageLen}, nil
 }
 
 func (s *Server) Serve(listener net.Listener) error {
