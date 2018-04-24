@@ -64,26 +64,37 @@ var testFcalls = []plan9.Fcall{
 	plan9.Fcall{Type: plan9.Rcreate, Tag: 42, Qid: plan9Qids[1], Iounit: 8192},
 	plan9.Fcall{Type: plan9.Rcreate, Tag: plan9.NOTAG, Qid: plan9Qids[0], Iounit: math.MaxUint32},
 
+	plan9.Fcall{Type: plan9.Tread, Tag: 42, Fid: 1, Offset: 0, Count: 8192},
+	plan9.Fcall{Type: plan9.Tread, Tag: plan9.NOTAG, Fid: math.MaxUint32, Offset: math.MaxUint64,
+		Count: math.MaxUint32},
+	plan9.Fcall{Type: plan9.Tread, Tag: 0, Fid: 0, Offset: 0, Count: 0},
+
+	plan9.Fcall{Type: plan9.Rread, Tag: 42, Count: uint32(len(testData)), Data: testData},
+	plan9.Fcall{Type: plan9.Rread, Tag: plan9.NOTAG, Count: uint32(len(testData)),
+		Data: testData},
+	plan9.Fcall{Type: plan9.Rread, Tag: plan9.NOTAG, Count: 0, Data: nil},
+
+	plan9.Fcall{Type: plan9.Twrite, Tag: 42, Fid: 1, Offset: 0, Count: uint32(len(testData)),
+		Data: testData},
+	plan9.Fcall{Type: plan9.Twrite, Tag: plan9.NOTAG, Fid: math.MaxUint32, Offset: math.MaxUint64,
+		Count: uint32(len(testData)), Data: testData},
+	plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 0},
+	plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 8192},
+
+	plan9.Fcall{Type: plan9.Tclunk, Tag: 42, Fid: 42},
+	plan9.Fcall{Type: plan9.Tclunk, Tag: plan9.NOTAG, Fid: math.MaxUint32},
+	plan9.Fcall{Type: plan9.Tclunk, Tag: 0, Fid: 0},
+	plan9.Fcall{Type: plan9.Rclunk, Tag: 42},
+	plan9.Fcall{Type: plan9.Rclunk, Tag: plan9.NOTAG},
+	plan9.Fcall{Type: plan9.Rclunk, Tag: 0},
+	plan9.Fcall{Type: plan9.Tremove, Tag: 42, Fid: 42},
+	plan9.Fcall{Type: plan9.Tremove, Tag: plan9.NOTAG, Fid: math.MaxUint32},
+	plan9.Fcall{Type: plan9.Tremove, Tag: 0, Fid: 0},
+	plan9.Fcall{Type: plan9.Rremove, Tag: 42},
+	plan9.Fcall{Type: plan9.Rremove, Tag: plan9.NOTAG},
+	plan9.Fcall{Type: plan9.Rremove, Tag: 0},
+
 	/*
-		plan9.Fcall{Type: plan9.Tread, Tag: 42, Fid: 42, Offset: 0, Count: 8192},
-		plan9.Fcall{Type: plan9.Tread, Tag: 42, Fid: 42, Offset: 8192, Count: 8192},
-		plan9.Fcall{Type: plan9.Tread, Tag: 42, Fid: 42, Offset: 0, Count: 0},
-		//plan9.Fcall{Type: plan9.Rread, Tag: 42, Count: uint32(len(testData)), Data: testData},
-
-		//plan9.Fcall{Type: plan9.Twrite, Tag: 42, Fid: 42, Offset: 0,
-		//	Count: uint32(len(testData)), Data: testData},
-		//plan9.Fcall{Type: plan9.Twrite, Tag: 42, Fid: 42, Offset: 8192,
-		//	Count: uint32(len(testData)), Data: testData},
-		plan9.Fcall{Type: plan9.Twrite, Tag: 42, Fid: 42, Offset: 0,
-			Count: 0, Data: []byte{}},
-		plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 0},
-		plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 8192},
-
-		plan9.Fcall{Type: plan9.Tclunk, Tag: 42, Fid: 42},
-		plan9.Fcall{Type: plan9.Rclunk, Tag: 42},
-		plan9.Fcall{Type: plan9.Tremove, Tag: 42, Fid: 42},
-		plan9.Fcall{Type: plan9.Rremove, Tag: 42},
-
 		plan9.Fcall{Type: plan9.Tstat, Tag: 42, Fid: 42},
 		//plan9.Fcall{Type: plan9.Rstat, Tag: 42, Stat: testDirBytes},
 		//plan9.Fcall{Type: plan9.Rstat, Tag: plan9.NOTAG, Stat: testMaxDirBytes},
@@ -317,23 +328,23 @@ func TestBasicEncoderCompatiblity(t *testing.T) {
 			enc.Tcreate(f.Tag, f.Fid, f.Name, uint32(f.Perm), f.Mode)
 		case plan9.Rcreate:
 			enc.Rcreate(f.Tag, plan9QidToQid(f.Qid), f.Iounit)
+		case plan9.Tread:
+			enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
+		case plan9.Rread:
+			enc.Rread(f.Tag, f.Data)
+		case plan9.Twrite:
+			enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
+		case plan9.Rwrite:
+			enc.Rwrite(f.Tag, f.Count)
+		case plan9.Tclunk:
+			enc.Tclunk(f.Tag, f.Fid)
+		case plan9.Rclunk:
+			enc.Rclunk(f.Tag)
+		case plan9.Tremove:
+			enc.Tremove(f.Tag, f.Fid)
+		case plan9.Rremove:
+			enc.Rremove(f.Tag)
 			/*
-				case plan9.Tread:
-					enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
-				case plan9.Rread:
-					enc.Rread(f.Tag, f.Data)
-				case plan9.Twrite:
-					enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
-				case plan9.Rwrite:
-					enc.Rwrite(f.Tag, f.Count)
-				case plan9.Tclunk:
-					enc.Tclunk(f.Tag, f.Fid)
-				case plan9.Rclunk:
-					enc.Rclunk(f.Tag)
-				case plan9.Tremove:
-					enc.Tremove(f.Tag, f.Fid)
-				case plan9.Rremove:
-					enc.Rremove(f.Tag)
 				case plan9.Tstat:
 					enc.Tstat(f.Tag, f.Fid)
 				case plan9.Rstat:

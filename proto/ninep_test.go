@@ -17,6 +17,7 @@ var (
 	maxVersionStr string
 	maxUnameStr   string
 	maxNameStr    string
+	testData      []byte
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -34,6 +35,7 @@ func init() {
 	maxVersionStr = randString(maxVersionLen)
 	maxUnameStr = randString(maxUnameLen)
 	maxNameStr = randString(MaxNameLen)
+	testData = make([]byte, 8192)
 }
 
 func TestQidEncoding(t *testing.T) {
