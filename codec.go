@@ -194,19 +194,19 @@ func (e *encoder) Tstat(tag uint16, fid uint32) error {
 	return err
 }
 
-//func (e *encoder) Rstat(tag uint16, stat proto.Stat) error {
-//	e.mu.Lock()
-//	err := e.flush(e.enc.Rstat(tag, stat))
-//	e.mu.Unlock()
-//	return err
-//}
+func (e *encoder) Rstat(tag uint16, stat proto.Stat) error {
+	e.mu.Lock()
+	err := e.flush(e.enc.Rstat(tag, stat))
+	e.mu.Unlock()
+	return err
+}
 
-//func (e *encoder) Twstat(tag uint16, fid uint32, stat proto.Stat) error {
-//	e.mu.Lock()
-//	err := e.flush(e.enc.Twstat(tag, fid, stat))
-//	e.mu.Unlock()
-//	return err
-//}
+func (e *encoder) Twstat(tag uint16, fid uint32, stat proto.Stat) error {
+	e.mu.Lock()
+	err := e.flush(e.enc.Twstat(tag, fid, stat))
+	e.mu.Unlock()
+	return err
+}
 
 func (e *encoder) Rwstat(tag uint16) error {
 	e.mu.Lock()
