@@ -59,14 +59,14 @@ const (
 	// group identifier.
 	maxUnameLen = 255
 
-	// maxNameLen is the maximum length of a file name in bytes.
-	maxNameLen = 255
+	// MaxNameLen is the maximum length of a file name in bytes.
+	MaxNameLen = 255
 
-	// maxWalkElem is the maximum allowed number of path elements in a
+	// MaxWalkElem is the maximum allowed number of path elements in a
 	// Twalk request.
-	maxWalkElem = 16
+	MaxWalkElem = 16
 
-	maxPathLen = maxWalkElem + maxWalkElem*maxNameLen // 4096 bytes
+	MaxPathLen = MaxWalkElem + MaxWalkElem*(2+MaxNameLen)
 
 	// MaxMessageLen is the maximum size of a 9P2000 message.
 	MaxMessageLen = (FixedReadWriteLen + 1) + MaxDataLen
@@ -81,6 +81,9 @@ const (
 	// DefaultMaxDataLen is the default maximum data size of a Twrite or
 	// Rread message.
 	DefaultMaxDataLen = 2 * 1024 * 1024
+
+	// MinMessageLen is the minimum size of a  9P2000 message.
+	MinMessageLen = 17 + MaxPathLen
 )
 
 // Version defines the supported protocol version.

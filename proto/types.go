@@ -157,7 +157,7 @@ type Twalk []byte
 
 func parseTwalk(data []byte) (Twalk, error) {
 	n := int(guint16(data[15:17]))
-	if n > maxWalkElem {
+	if n > MaxWalkElem {
 		return nil, errMaxWalkElem
 	}
 	for i := 0; i < n; i++ {

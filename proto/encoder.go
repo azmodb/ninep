@@ -145,7 +145,7 @@ func (e *encoder) Rflush(tag uint16) error {
 }
 
 func (e *encoder) Twalk(tag uint16, fid, newfid uint32, names ...string) error {
-	if len(names) > maxWalkElem {
+	if len(names) > MaxWalkElem {
 		return errMaxWalkElem
 	}
 
@@ -167,7 +167,7 @@ func (e *encoder) Twalk(tag uint16, fid, newfid uint32, names ...string) error {
 }
 
 func (e *encoder) Rwalk(tag uint16, qids ...Qid) error {
-	if len(qids) > maxWalkElem {
+	if len(qids) > MaxWalkElem {
 		return errMaxWalkElem
 	}
 

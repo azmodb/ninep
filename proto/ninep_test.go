@@ -33,7 +33,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	maxVersionStr = randString(maxVersionLen)
 	maxUnameStr = randString(maxUnameLen)
-	maxNameStr = randString(maxNameLen)
+	maxNameStr = randString(MaxNameLen)
 }
 
 func TestQidEncoding(t *testing.T) {

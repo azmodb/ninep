@@ -55,7 +55,7 @@ func verifyUname(uname []byte) error {
 }
 
 func verifyName(name []byte) error {
-	if len(name) > maxNameLen {
+	if len(name) > MaxNameLen {
 		return errElemTooLarge
 	}
 	if !utf8.Valid(name) {
@@ -74,10 +74,10 @@ func verifyPath(name []byte) (err error) {
 	if len(name) == 0 {
 		return nil
 	}
-	if len(name) > maxPathLen {
+	if len(name) > MaxPathLen {
 		return errPathTooLarge
 	}
-	if bytes.Count(name, separator) > maxWalkElem {
+	if bytes.Count(name, separator) > MaxWalkElem {
 		return errMaxWalkElem
 	}
 
