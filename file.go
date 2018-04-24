@@ -1,41 +1,76 @@
 package ninep
 
 import (
+	"context"
 	"errors"
 	"io"
-	"os"
 	"time"
+
+	"github.com/azmodb/ninep/proto"
 )
 
-type File interface {
-	Create(name string, flag int, perm os.FileMode) error
-	Stat() (os.FileInfo, error)
+type FileSystem interface {
+	Access(ctx context.Context, auth File, user, root string) (File, error)
+	//Auth(ctx context.Context, auth File, user, root string) (File, error)
+}
 
-	io.WriterAt
-	io.ReaderAt
-	io.Closer
+type File interface {
+	Create(ctx context.Context, name string, mode uint8, perm Perm) error
+	Open(ctx context.Context, mode uint8) error
+	Walk(ctx context.Context, names ...string) (File, error)
+	Remove(ctx context.Context) error
+	Clunk(ctx context.Context) error
+
+	Stat(ctx context.Context) (proto.Stat, error)
+
+	WriteAt(ctx context.Context, data []byte, offset int64) (int, error)
+	ReadAt(ctx context.Context, data []byte, offset int64) (int, error)
 }
 
 type file struct {
 	children map[string]*file
 	data     []byte
-
-	mode  os.FileMode
-	mtime time.Time
-	atime time.Time
-	name  string
+	stat     *proto.Stat
 }
 
-func newFile(mode os.FileMode) File { return &file{} }
+func newFile() File { return &file{} }
 
-func (f *file) Create(name string, flag int, perm os.FileMode) error {
+func (f *file) Create(_ context.Context, name string, mode uint8, perm Perm) error {
 	return nil
 }
 
-func (f file) Stat() (os.FileInfo, error) { return f, nil }
+func (f *file) Open(_ context.Context, mode uint8) error { return nil }
 
-func (f *file) WriteAt(p []byte, offset int64) (int, error) {
-	if f.mode&os.ModeDir != 0 {
+func (f *file) Walk(_ context.Context, names ...string) (File, error) {
+	return nil, nil
+}
+
+func (f *file) Remove(_ context.Context) error { return nil }
+
+func (f *file) Clunk(_ context.Context) error { return nil }
+
+func (f *file) Stat(_ context.Context) (proto.Stat, error) {
+	return proto.Stat{
+		Type: f.stat.Type,
+		Dev:  f.stat.Dev,
+		Qid: proto.Qid{
+			Type:    f.stat.Qid.Type,
+			Version: f.stat.Qid.Version,
+			Path:    f.stat.Qid.Path,
+		},
+		Mode:   f.stat.Mode,
+		Atime:  f.stat.Atime,
+		Mtime:  f.stat.Mtime,
+		Length: f.stat.Length,
+		Name:   f.stat.Name,
+		UID:    f.stat.UID,
+		GID:    f.stat.GID,
+		MUID:   f.stat.MUID,
+	}, nil
+}
+
+func (f *file) WriteAt(_ context.Context, p []byte, offset int64) (int, error) {
+	if f.stat.Mode&DMDIR != 0 {
 		return 0, errors.New("is a directory")
 	}
 	if offset < 0 {
@@ -49,7 +84,7 @@ func (f *file) WriteAt(p []byte, offset int64) (int, error) {
 		f.data = make([]byte, len(p))
 	}
 
-	f.mtime = time.Now()
+	f.stat.Mtime = uint32(time.Now().Unix())
 	n := copy(f.data[offset:], p)
 	if n < len(p) {
 		data := grow(f.data, len(f.data)+len(p)-n)
@@ -69,8 +104,8 @@ func grow(data []byte, size int) []byte {
 	return data[:size]
 }
 
-func (f *file) ReadAt(p []byte, offset int64) (int, error) {
-	if f.mode&os.ModeDir != 0 {
+func (f *file) ReadAt(_ context.Context, p []byte, offset int64) (int, error) {
+	if f.stat.Mode&DMDIR != 0 {
 		return 0, errors.New("is a directory")
 	}
 	if offset < 0 {
@@ -84,18 +119,6 @@ func (f *file) ReadAt(p []byte, offset int64) (int, error) {
 		p = p[:size-offset]
 	}
 
-	f.atime = time.Now()
+	f.stat.Atime = uint32(time.Now().Unix())
 	return copy(p, f.data[offset:]), nil
 }
-
-func (f *file) Close() error { return nil }
-
-// file implements os.FileInfo
-func (f file) IsDir() bool        { return f.mode&os.ModeDir != 0 }
-func (f file) Size() int64        { return int64(len(f.data)) }
-func (f file) Name() string       { return f.name }
-func (f file) Mode() os.FileMode  { return f.mode }
-func (f file) Sys() interface{}   { return nil }
-func (f file) ModTime() time.Time { return f.mtime }
-
-func (f file) AccessTime() time.Time { return f.atime }
