@@ -32,24 +32,24 @@ func (c *serverConn) Handshake() error { return nil }
 
 func (c *serverConn) Serve() (err error) {
 	for {
-		typ, buf, decErr := c.dec.Next()
+		typ, tag, buf, decErr := c.dec.Next()
 		if err = decErr; err != nil {
 			break // TODO: retry strategy
 		}
 
-		go c.handle(typ, buf)
+		go c.handle(typ, tag, buf)
 	}
 	return err
 }
 
-func (c *serverConn) handle(typ proto.FcallType, buf *proto.Buffer) {
+func (c *serverConn) handle(typ proto.FcallType, tag uint16, buf *proto.Buffer) {
 	switch typ {
 	case proto.Tauth:
-		c.tauth(buf)
+		c.tauth(tag, buf)
 	case proto.Tattach:
-		c.tattach(buf)
+		c.tattach(tag, buf)
 	case proto.Tflush:
-		c.tflush(buf)
+		c.tflush(tag, buf)
 
 	case proto.Twalk:
 	case proto.Topen:
@@ -63,9 +63,9 @@ func (c *serverConn) handle(typ proto.FcallType, buf *proto.Buffer) {
 	}
 }
 
-func (c *serverConn) tauth(buf *proto.Buffer)   {}
-func (c *serverConn) tattach(buf *proto.Buffer) {}
-func (c *serverConn) tflush(buf *proto.Buffer)  {}
+func (c *serverConn) tauth(tag uint16, buf *proto.Buffer)   {}
+func (c *serverConn) tattach(tag uint16, buf *proto.Buffer) {}
+func (c *serverConn) tflush(tag uint16, buf *proto.Buffer)  {}
 
 type Server struct{}
 
