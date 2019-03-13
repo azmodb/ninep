@@ -193,25 +193,24 @@ func (b *Buffer) raw16() []byte {
 	return data
 }
 
-func (b *Buffer) version() (uint16, int64, string) {
-	return b.uint16(), int64(b.uint32()), b.string(MaxVersionSize, ErrVersionTooLarge)
+func (b *Buffer) version() (int64, string) {
+	return int64(b.uint32()), b.string(MaxVersionSize, ErrVersionTooLarge)
 }
 
 // Tversion decodes a Tversion message from Buffer.
-func (b *Buffer) Tversion() (tag uint16, msize int64, version string) {
-	tag, msize, version = b.version()
+func (b *Buffer) Tversion() (msize int64, version string) {
+	msize, version = b.version()
 	return
 }
 
 // Rversion decodes a Rversion message from Buffer.
-func (b *Buffer) Rversion() (tag uint16, msize int64, version string) {
-	tag, msize, version = b.version()
+func (b *Buffer) Rversion() (msize int64, version string) {
+	msize, version = b.version()
 	return
 }
 
 // Tauth decodes a Tauth message from Buffer.
-func (b *Buffer) Tauth() (tag uint16, afid uint32, uname, aname string) {
-	tag = b.uint16()
+func (b *Buffer) Tauth() (afid uint32, uname, aname string) {
 	afid = b.uint32()
 	uname = b.string(MaxUserNameSize, ErrUserNameTooLarge)
 	aname = b.string(MaxPathSize, ErrPathTooLarge)
@@ -219,8 +218,7 @@ func (b *Buffer) Tauth() (tag uint16, afid uint32, uname, aname string) {
 }
 
 // Tattach decodes a Tattach message from Buffer.
-func (b *Buffer) Tattach() (tag uint16, fid, afid uint32, uname, aname string) {
-	tag = b.uint16()
+func (b *Buffer) Tattach() (fid, afid uint32, uname, aname string) {
 	fid = b.uint32()
 	afid = b.uint32()
 	uname = b.string(MaxUserNameSize, ErrUserNameTooLarge)
@@ -229,8 +227,7 @@ func (b *Buffer) Tattach() (tag uint16, fid, afid uint32, uname, aname string) {
 }
 
 // Rauth decodes a Rauth message from Buffer.
-func (b *Buffer) Rauth() (tag uint16, typ uint8, version uint32, path uint64) {
-	tag = b.uint16()
+func (b *Buffer) Rauth() (typ uint8, version uint32, path uint64) {
 	typ = b.uint8()
 	version = b.uint32()
 	path = b.uint64()
@@ -238,8 +235,7 @@ func (b *Buffer) Rauth() (tag uint16, typ uint8, version uint32, path uint64) {
 }
 
 // Rattach decodes a Rattach message from Buffer.
-func (b *Buffer) Rattach() (tag uint16, typ uint8, version uint32, path uint64) {
-	tag = b.uint16()
+func (b *Buffer) Rattach() (typ uint8, version uint32, path uint64) {
 	typ = b.uint8()
 	version = b.uint32()
 	path = b.uint64()
@@ -247,25 +243,18 @@ func (b *Buffer) Rattach() (tag uint16, typ uint8, version uint32, path uint64) 
 }
 
 // Rerror decodes a Rerror message from Buffer.
-func (b *Buffer) Rerror() (tag uint16, ename string) {
-	tag = b.uint16()
-	ename = b.string(MaxEnameSize, ErrEnameTooLarge)
-	return
+func (b *Buffer) Rerror() string {
+	return b.string(MaxEnameSize, ErrEnameTooLarge)
 }
 
 // Tflush decodes a Tflush message from Buffer.
-func (b *Buffer) Tflush() (tag, oldtag uint16) {
-	tag = b.uint16()
-	oldtag = b.uint16()
-	return
-}
+func (b *Buffer) Tflush() uint16 { return b.uint16() }
 
 // Rflush decodes a Rflush message from Buffer.
-func (b *Buffer) Rflush() uint16 { return b.uint16() }
+//func (b *Buffer) Rflush() uint16 { return b.uint16() }
 
 // Twalk decodes a Twalk message from Buffer.
-func (b *Buffer) Twalk() (tag uint16, fid, newfid uint32, names []string) {
-	tag = b.uint16()
+func (b *Buffer) Twalk() (fid, newfid uint32, names []string) {
 	fid = b.uint32()
 	newfid = b.uint32()
 	n := b.uint16()
@@ -285,8 +274,7 @@ func (b *Buffer) Twalk() (tag uint16, fid, newfid uint32, names []string) {
 }
 
 // Rwalk decodes a Rwalk message from Buffer.
-func (b *Buffer) Rwalk() (tag uint16, qids []Qid) {
-	tag = b.uint16()
+func (b *Buffer) Rwalk() (qids []Qid) {
 	n := b.uint16()
 	if n > MaxWalkElements {
 		b.err = ErrWalkElements
@@ -308,16 +296,14 @@ func (b *Buffer) Rwalk() (tag uint16, qids []Qid) {
 }
 
 // Topen decodes a Topen message from Buffer.
-func (b *Buffer) Topen() (tag uint16, fid uint32, mode uint8) {
-	tag = b.uint16()
+func (b *Buffer) Topen() (fid uint32, mode uint8) {
 	fid = b.uint32()
 	mode = b.uint8()
 	return
 }
 
 // Ropen decodes a Ropen message from Buffer.
-func (b *Buffer) Ropen() (tag uint16, typ uint8, version uint32, path uint64, iounit uint32) {
-	tag = b.uint16()
+func (b *Buffer) Ropen() (typ uint8, version uint32, path uint64, iounit uint32) {
 	typ = b.uint8()
 	version = b.uint32()
 	path = b.uint64()
@@ -326,8 +312,7 @@ func (b *Buffer) Ropen() (tag uint16, typ uint8, version uint32, path uint64, io
 }
 
 // Tcreate decodes a Tcreate message from Buffer.
-func (b *Buffer) Tcreate() (tag uint16, fid uint32, name string, perm uint32, mode uint8) {
-	tag = b.uint16()
+func (b *Buffer) Tcreate() (fid uint32, name string, perm uint32, mode uint8) {
 	fid = b.uint32()
 	name = b.string(MaxDirNameSize, ErrDirNameTooLarge)
 	perm = b.uint32()
@@ -336,8 +321,7 @@ func (b *Buffer) Tcreate() (tag uint16, fid uint32, name string, perm uint32, mo
 }
 
 // Rcreate decodes a Rcreate message from Buffer.
-func (b *Buffer) Rcreate() (tag uint16, typ uint8, version uint32, path uint64, iounit uint32) {
-	tag = b.uint16()
+func (b *Buffer) Rcreate() (typ uint8, version uint32, path uint64, iounit uint32) {
 	typ = b.uint8()
 	version = b.uint32()
 	path = b.uint64()
@@ -346,8 +330,7 @@ func (b *Buffer) Rcreate() (tag uint16, typ uint8, version uint32, path uint64, 
 }
 
 // Tread decodes a Tread message from Buffer.
-func (b *Buffer) Tread() (tag uint16, fid uint32, offset uint64, count uint32) {
-	tag = b.uint16()
+func (b *Buffer) Tread() (fid uint32, offset uint64, count uint32) {
 	fid = b.uint32()
 	offset = b.uint64()
 	count = b.uint32()
@@ -355,15 +338,13 @@ func (b *Buffer) Tread() (tag uint16, fid uint32, offset uint64, count uint32) {
 }
 
 // Rread decodes a Rread message from Buffer.
-func (b *Buffer) Rread() (tag uint16, data []byte) {
-	tag = b.uint16()
+func (b *Buffer) Rread() (data []byte) {
 	data = b.raw32()
 	return
 }
 
 // Twrite decodes a Twrite message from Buffer.
-func (b *Buffer) Twrite() (tag uint16, fid uint32, offset uint64, data []byte) {
-	tag = b.uint16()
+func (b *Buffer) Twrite() (fid uint32, offset uint64, data []byte) {
 	fid = b.uint32()
 	offset = b.uint64()
 	data = b.raw32()
@@ -371,49 +352,43 @@ func (b *Buffer) Twrite() (tag uint16, fid uint32, offset uint64, data []byte) {
 }
 
 // Rwrite decodes a Rwrite message from Buffer.
-func (b *Buffer) Rwrite() (tag uint16, count uint32) {
-	tag = b.uint16()
+func (b *Buffer) Rwrite() (count uint32) {
 	count = b.uint32()
 	return
 }
 
 // Tclunk decodes a Tclunk message from Buffer.
-func (b *Buffer) Tclunk() (tag uint16, fid uint32) {
-	tag = b.uint16()
+func (b *Buffer) Tclunk() (fid uint32) {
 	fid = b.uint32()
 	return
 }
 
 // Rclunk decodes a Rclunk message from Buffer.
-func (b *Buffer) Rclunk() uint16 { return b.uint16() }
+//func (b *Buffer) Rclunk() uint16 { return b.uint16() }
 
 // Tremove decodes a Tremove message from Buffer.
-func (b *Buffer) Tremove() (tag uint16, fid uint32) {
-	tag = b.uint16()
+func (b *Buffer) Tremove() (fid uint32) {
 	fid = b.uint32()
 	return
 }
 
 // Rremove decodes a Rremove message from Buffer.
-func (b *Buffer) Rremove() uint16 { return b.uint16() }
+//func (b *Buffer) Rremove() uint16 { return b.uint16() }
 
 // Tstat decodes a Tstat message from Buffer.
-func (b *Buffer) Tstat() (tag uint16, fid uint32) {
-	tag = b.uint16()
+func (b *Buffer) Tstat() (fid uint32) {
 	fid = b.uint32()
 	return
 }
 
 // Rstat decodes a Rstat message from Buffer.
-func (b *Buffer) Rstat() (tag uint16, data []byte) {
-	tag = b.uint16()
+func (b *Buffer) Rstat() (data []byte) {
 	data = b.raw16()
 	return
 }
 
 // Twstat decodes a Twstat message from Buffer.
-func (b *Buffer) Twstat() (tag uint16, fid uint32, data []byte) {
-	tag = b.uint16()
+func (b *Buffer) Twstat() (fid uint32, data []byte) {
 	fid = b.uint32()
 	data = b.raw16()
 	return
@@ -436,7 +411,7 @@ type Decoder struct {
 	// message.
 	MaxMessageSize int64
 
-	header [5]byte
+	header [7]byte
 	r      io.Reader
 	err    error
 }
@@ -456,41 +431,41 @@ func (d *Decoder) Reset(r io.Reader) {
 	d.err = nil
 }
 
-func (d *Decoder) decodeHeader() (int, FcallType, error) {
+func (d *Decoder) decodeHeader() (int, FcallType, uint16, error) {
 	if err := d.readFull(d.header[:]); err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	size := int64(order.Uint32(d.header[:4]))
 	if size < headerLen {
-		return 0, 0, ErrMessageTooSmall
+		return 0, 0, 0, ErrMessageTooSmall
 	}
 	if size > d.MaxMessageSize || size > maxInt {
-		return 0, 0, ErrMessageTooLarge
+		return 0, 0, 0, ErrMessageTooLarge
 	}
 
 	typ := FcallType(d.header[4])
 	if typ < Tversion || typ > Rwstat {
-		return 0, 0, ErrUnknownMessageType
+		return 0, 0, 0, ErrUnknownMessageType
 	}
 
-	return int(size - 5), typ, nil
+	return int(size - 7), typ, order.Uint16(d.header[5:7]), nil
 }
 
 // Next reads the next message from the input stream and stores it
 // Buffer.
-func (d *Decoder) Next() (FcallType, *Buffer, error) {
-	size, typ, err := d.decodeHeader()
+func (d *Decoder) Next() (FcallType, uint16, *Buffer, error) {
+	size, typ, tag, err := d.decodeHeader()
 	if err != nil {
-		return 0, nil, err
+		return 0, 0, nil, err
 	}
 
 	buf := newBuffer(size, true)
 	if err = d.readFull(buf.data[:size]); err != nil {
-		return 0, nil, err
+		return 0, 0, nil, err
 	}
 
-	return typ, buf, nil
+	return typ, tag, buf, nil
 }
 
 func (d *Decoder) readFull(buf []byte) error {

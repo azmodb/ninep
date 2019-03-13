@@ -381,69 +381,77 @@ func TestEncoderCompatiblity(t *testing.T) {
 	}
 }
 
-func decodePlan9Fcall(buf *Buffer, f, v *plan9.Fcall) error {
+func decodePlan9Fcall(buf *Buffer, tag uint16, f, v *plan9.Fcall) error {
 	switch f.Type {
 	case plan9.Tversion:
-		tag, msize, version := buf.Tversion()
+		msize, version := buf.Tversion()
 		*v = plan9.NewVersion(plan9.Tversion, tag, uint32(msize), version)
 	case plan9.Rversion:
-		tag, msize, version := buf.Tversion()
+		msize, version := buf.Tversion()
 		*v = plan9.NewVersion(plan9.Rversion, tag, uint32(msize), version)
 	case plan9.Tauth:
-		*v = plan9.NewTauth(buf.Tauth())
+		afid, uname, aname := buf.Tauth()
+		*v = plan9.NewTauth(tag, afid, uname, aname)
 	case plan9.Tattach:
-		*v = plan9.NewTattach(buf.Tattach())
+		fid, afid, uname, aname := buf.Tattach()
+		*v = plan9.NewTattach(tag, fid, afid, uname, aname)
 	case plan9.Rauth:
-		tag, typ, version, path := buf.Rauth()
+		typ, version, path := buf.Rauth()
 		*v = plan9.NewRauth(tag, plan9.Qid{path, version, typ})
 	case plan9.Rattach:
-		tag, typ, version, path := buf.Rattach()
+		typ, version, path := buf.Rattach()
 		*v = plan9.NewRattach(tag, plan9.Qid{path, version, typ})
 	case plan9.Rerror:
-		*v = plan9.NewRerror(buf.Rerror())
+		*v = plan9.NewRerror(tag, buf.Rerror())
 	case plan9.Tflush:
-		*v = plan9.NewTflush(buf.Tflush())
+		*v = plan9.NewTflush(tag, buf.Tflush())
 	case plan9.Rflush:
-		*v = plan9.NewRflush(buf.Rflush())
+		*v = plan9.NewRflush(tag)
 	case plan9.Twalk:
-		*v = plan9.NewTwalk(buf.Twalk())
+		fid, newfid, names := buf.Twalk()
+		*v = plan9.NewTwalk(tag, fid, newfid, names)
 	case plan9.Rwalk:
-		tag, qids := buf.Rwalk()
+		qids := buf.Rwalk()
 		*v = plan9.NewRwalk(tag, qidsToPlan9Qids(qids))
 	case plan9.Topen:
-		*v = plan9.NewTopen(buf.Topen())
+		fid, mode := buf.Topen()
+		*v = plan9.NewTopen(tag, fid, mode)
 	case plan9.Ropen:
-		tag, typ, version, path, iounit := buf.Ropen()
+		typ, version, path, iounit := buf.Ropen()
 		*v = plan9.NewRopen(tag, plan9.Qid{path, version, typ}, iounit)
 	case plan9.Tcreate:
-		*v = plan9.NewTcreate(buf.Tcreate())
+		fid, name, perm, mode := buf.Tcreate()
+		*v = plan9.NewTcreate(tag, fid, name, perm, mode)
 	case plan9.Rcreate:
-		tag, typ, version, path, iounit := buf.Rcreate()
+		typ, version, path, iounit := buf.Rcreate()
 		*v = plan9.NewRcreate(tag, plan9.Qid{path, version, typ}, iounit)
 	case plan9.Tread:
-		*v = plan9.NewTread(buf.Tread())
+		fid, offset, count := buf.Tread()
+		*v = plan9.NewTread(tag, fid, offset, count)
 	case plan9.Rread:
-		*v = plan9.NewRread(buf.Rread())
+		*v = plan9.NewRread(tag, buf.Rread())
 	case plan9.Twrite:
-		*v = plan9.NewTwrite(buf.Twrite())
+		fid, offset, data := buf.Twrite()
+		*v = plan9.NewTwrite(tag, fid, offset, data)
 	case plan9.Rwrite:
-		*v = plan9.NewRwrite(buf.Rwrite())
+		*v = plan9.NewRwrite(tag, buf.Rwrite())
 	case plan9.Tclunk:
-		*v = plan9.NewTclunk(buf.Tclunk())
+		*v = plan9.NewTclunk(tag, buf.Tclunk())
 	case plan9.Rclunk:
-		*v = plan9.NewRclunk(buf.Rclunk())
+		*v = plan9.NewRclunk(tag)
 	case plan9.Tremove:
-		*v = plan9.NewTremove(buf.Tremove())
+		*v = plan9.NewTremove(tag, buf.Tremove())
 	case plan9.Rremove:
-		*v = plan9.NewRremove(buf.Rremove())
+		*v = plan9.NewRremove(tag)
 	case plan9.Tstat:
-		*v = plan9.NewTstat(buf.Tstat())
+		*v = plan9.NewTstat(tag, buf.Tstat())
 	case plan9.Rstat:
-		*v = plan9.NewRstat(buf.Rstat())
+		*v = plan9.NewRstat(tag, buf.Rstat())
 	case plan9.Twstat:
-		*v = plan9.NewTwstat(buf.Twstat())
+		fid, data := buf.Twstat()
+		*v = plan9.NewTwstat(tag, fid, data)
 	case plan9.Rwstat:
-		*v = plan9.NewRwstat(buf.Rwstat())
+		*v = plan9.NewRwstat(tag)
 	}
 	return buf.Err()
 }
@@ -462,9 +470,9 @@ func TestDecoderCompatiblity(t *testing.T) {
 		}
 
 		buf.Write(data)
-		want := buf.Len() - 5
+		want := buf.Len() - 7
 
-		typ, b, err := dec.Next()
+		typ, tag, b, err := dec.Next()
 		if err != nil {
 			t.Errorf("decode test[#%d]: cannot decode plan9 fcall: %v", i, err)
 		}
@@ -472,13 +480,16 @@ func TestDecoderCompatiblity(t *testing.T) {
 		if uint8(typ) != f.Type {
 			t.Errorf("decode test[#%d]: expected type %d, got %d", i, f.Type, typ)
 		}
+		if tag != f.Tag {
+			t.Errorf("decode test[#%d]: expected tag %d, got %d", i, f.Tag, tag)
+		}
 
 		if b.Len() != want {
 			t.Errorf("decode test[#%d]: expected size %d, got %d", i, want, b.Len())
 		}
 
 		v = plan9.Fcall{}
-		if err := decodePlan9Fcall(b, &f, &v); err != nil {
+		if err := decodePlan9Fcall(b, tag, &f, &v); err != nil {
 			t.Errorf("decode test[#%d]: cannot unmarshal fcall: %v", i, err)
 		}
 		if !reflect.DeepEqual(v, f) {
