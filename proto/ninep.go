@@ -125,12 +125,12 @@ const (
 	MaxWalkElements = 16
 )
 
-// NOFID is a reserved fid used in a Tattach request for the afid field,
+// NoFid is a reserved fid used in a Tattach request for the afid field,
 // that indicates that the client does not wish to authenticate his
 // session.
 const NoFid = 1<<32 - 1
 
-// NOTAG is the tag for Tversion and Rversion requests.
+// NoTag is the tag for Tversion and Rversion requests.
 const NoTag = 1<<16 - 1
 
 // Defines 9P2000 protocol related errors.
