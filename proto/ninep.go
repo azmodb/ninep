@@ -125,6 +125,14 @@ const (
 	MaxWalkElements = 16
 )
 
+// NOFID is a reserved fid used in a Tattach request for the afid field,
+// that indicates that the client does not wish to authenticate his
+// session.
+const NoFid = ^uint32(0)
+
+// NOTAG is the tag for Tversion and Rversion requests.
+const NoTag = ^uint16(0)
+
 // Defines 9P2000 protocol related errors.
 const (
 	ErrDirNameTooLarge  = ProtocolError("file or directory name too large")
@@ -241,7 +249,7 @@ func (q Qid) String() string {
 	if q.Type&QTTMP != 0 {
 		t += "t"
 	}
-	return fmt.Sprintf("(%.16x %d %q)", q.Path, q.Version, t)
+	return fmt.Sprintf("%.16x %d %q", q.Path, q.Version, t)
 }
 
 // Stat describes a directory entry. It is contained in Rstat and Twstat
