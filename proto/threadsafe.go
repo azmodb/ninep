@@ -11,8 +11,7 @@ import (
 // been written, the client should call the Flush method to guarantee
 // all data has been forwarded to the underlying io.Writer.
 //
-// Encoder is not safe for concurrent use. Usage of any Encoder method
-// should be protected by a mutex.
+// Encoder is safe for concurrent use.
 type Encoder struct {
 	mu  sync.Mutex // exclusive writer lock
 	enc *BufferedEncoder
@@ -22,6 +21,14 @@ type Encoder struct {
 // io.Writer.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{enc: NewBufferedEncoder(w)}
+}
+
+// SetMaxMessageSize sets the maximum message size that a Encoder will
+// accept.
+func (e *Encoder) SetMaxMessageSize(size uint32) {
+	e.mu.Lock()
+	e.enc.MaxMessageSize = int64(size)
+	e.mu.Unlock()
 }
 
 // Reset discards any unflushed buffered data, clears any error, and

@@ -424,9 +424,16 @@ func NewDecoder(r io.Reader) *Decoder {
 	}
 }
 
+// SetMaxMessageSize sets the maximum message size that a Decoder will
+// accept.
+func (d *Decoder) SetMaxMessageSize(size uint32) {
+	d.MaxMessageSize = int64(size)
+}
+
 // Reset discards any buffered data, resets all state, and switches the
 // buffered reader to read from r.
 func (d *Decoder) Reset(r io.Reader) {
+	d.MaxMessageSize = DefaultMaxMessageSize
 	d.r = bufio.NewReader(r)
 	d.err = nil
 }

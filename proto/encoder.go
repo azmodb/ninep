@@ -14,9 +14,9 @@ import (
 // Encoder is not safe for concurrent use. Usage of any Encoder method
 // should be protected by a mutex.
 type BufferedEncoder struct {
-	// MaxMessageSize is the maximum size message that a Encoder will
-	// accept. If MaxMessageSize is -1, a Encoder will accept any size
-	// message.
+	// MaxMessageSize is the maximum size message that a BufferedEncoder
+	// will accept. If MaxMessageSize is -1, a Encoder will accept any
+	// size message.
 	MaxMessageSize int64
 
 	w   *bufio.Writer
@@ -33,9 +33,16 @@ func NewBufferedEncoder(w io.Writer) *BufferedEncoder {
 	}
 }
 
+// SetMaxMessageSize sets the maximum message size that a BufferedEncoder
+// will accept.
+func (e *BufferedEncoder) SetMaxMessageSize(size uint32) {
+	e.MaxMessageSize = int64(size)
+}
+
 // Reset discards any unflushed buffered data, clears any error, and
 // resets b to write its output to w.
 func (e *BufferedEncoder) Reset(w io.Writer) {
+	e.MaxMessageSize = DefaultMaxMessageSize
 	e.w = bufio.NewWriter(w)
 	e.err = nil
 }
