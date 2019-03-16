@@ -1,3 +1,6 @@
+// Package proto provides low-level routines for encoding and decoding 9P2000
+// messages. When decoding messages, memory usage is bounded using a
+// fixed-size buffer and decoding routines within make very few assumptions.
 package proto
 
 import (
