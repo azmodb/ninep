@@ -57,7 +57,7 @@ func (p *pool) Put(v uint32) {
 }
 
 type fcall struct {
-	buf *proto.Buffer
+	buf *proto.FcallBuffer
 	fid *Fid
 
 	err error
@@ -70,7 +70,7 @@ func newFcall() *fcall {
 
 func (f *fcall) reset() { *f = fcall{} }
 
-func (f *fcall) done(buf *proto.Buffer, err error) {
+func (f *fcall) done(buf *proto.FcallBuffer, err error) {
 	if f == nil {
 		return
 	}
@@ -105,7 +105,7 @@ type Client struct {
 	rwc io.ReadWriteCloser
 
 	dec *proto.Decoder
-	enc *encoder
+	enc *proto.Encoder
 
 	fidpool *pool
 	tagpool *pool
@@ -133,7 +133,7 @@ func Dial(ctx context.Context, network, addr string, opts ...ClientOption) (*Cli
 // services at the other end of the connection.
 func NewClient(rwc io.ReadWriteCloser, opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		enc: &encoder{e: proto.NewEncoder(rwc)},
+		enc: proto.NewEncoder(rwc),
 		dec: proto.NewDecoder(rwc),
 		rwc: rwc,
 
@@ -306,7 +306,6 @@ func (c *Client) recv() (err error) {
 		fcall.done(buf, nil)
 	}
 
-	c.enc.writer.Lock()
 	c.mu.Lock()
 	c.shutdown = true
 	if err == io.EOF {
@@ -320,6 +319,5 @@ func (c *Client) recv() (err error) {
 		fcall.done(nil, err)
 	}
 	c.mu.Unlock()
-	c.enc.writer.Unlock()
 	return err
 }

@@ -15,14 +15,14 @@ type serverConn struct {
 	rwc io.ReadWriteCloser
 
 	dec *proto.Decoder
-	enc *encoder
+	enc *proto.Encoder
 
 	msize int64
 }
 
 func newServerConn(rwc io.ReadWriteCloser, msize int64) *serverConn {
 	return &serverConn{
-		enc:   &encoder{e: proto.NewEncoder(rwc)},
+		enc:   proto.NewEncoder(rwc),
 		dec:   proto.NewDecoder(rwc),
 		rwc:   rwc,
 		msize: msize,
@@ -33,7 +33,8 @@ func (c *serverConn) Close() error { return c.rwc.Close() }
 
 func (c *serverConn) Handshake() (err error) {
 	// 128 bytes should is enough for a tversion message
-	c.dec.MaxMessageSize = 128
+	c.dec.SetMaxMessageSize(128)
+
 	typ, tag, buf, err := c.dec.Next()
 	if err != nil {
 		return err
@@ -57,8 +58,8 @@ func (c *serverConn) Handshake() (err error) {
 	if msize < c.msize {
 		c.msize = msize
 	}
-	c.enc.e.MaxMessageSize = c.msize
-	c.dec.MaxMessageSize = c.msize
+	c.enc.SetMaxMessageSize(uint32(c.msize))
+	c.dec.SetMaxMessageSize(uint32(c.msize))
 
 	if version != proto.Version {
 		version = "unknown"
@@ -78,7 +79,7 @@ func (c *serverConn) Serve() (err error) {
 	return err
 }
 
-func (c *serverConn) handle(typ proto.FcallType, tag uint16, buf *proto.Buffer) {
+func (c *serverConn) handle(typ proto.FcallType, tag uint16, buf *proto.FcallBuffer) {
 	switch typ {
 	case proto.Tauth:
 		c.tauth(tag, buf)
@@ -99,9 +100,9 @@ func (c *serverConn) handle(typ proto.FcallType, tag uint16, buf *proto.Buffer) 
 	}
 }
 
-func (c *serverConn) tauth(tag uint16, buf *proto.Buffer)   {}
-func (c *serverConn) tattach(tag uint16, buf *proto.Buffer) {}
-func (c *serverConn) tflush(tag uint16, buf *proto.Buffer)  {}
+func (c *serverConn) tauth(tag uint16, buf *proto.FcallBuffer)   {}
+func (c *serverConn) tattach(tag uint16, buf *proto.FcallBuffer) {}
+func (c *serverConn) tflush(tag uint16, buf *proto.FcallBuffer)  {}
 
 type Server struct {
 	msize int64
