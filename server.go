@@ -1,6 +1,7 @@
 package ninep
 
 import (
+	"errors"
 	"io"
 	"net"
 
@@ -14,21 +15,56 @@ type serverConn struct {
 	rwc io.ReadWriteCloser
 
 	dec *proto.Decoder
-	enc *proto.Encoder
+	enc *encoder
+
+	msize int64
 }
 
-func newServerConn(rwc io.ReadWriteCloser) *serverConn {
+func newServerConn(rwc io.ReadWriteCloser, msize int64) *serverConn {
 	return &serverConn{
-		enc: proto.NewEncoder(rwc),
-		dec: proto.NewDecoder(rwc),
-		rwc: rwc,
+		enc:   &encoder{e: proto.NewEncoder(rwc)},
+		dec:   proto.NewDecoder(rwc),
+		rwc:   rwc,
+		msize: msize,
 	}
 }
 
 func (c *serverConn) Close() error { return c.rwc.Close() }
 
-// TODO: Tversion -> Rversion
-func (c *serverConn) Handshake() error { return nil }
+func (c *serverConn) Handshake() (err error) {
+	// 128 bytes should is enough for a tversion message
+	c.dec.MaxMessageSize = 128
+	typ, tag, buf, err := c.dec.Next()
+	if err != nil {
+		return err
+	}
+	if typ != proto.Tversion {
+		err = errors.New("malformed handshake request")
+		c.enc.Rerror(tag, err.Error())
+		return err
+	}
+
+	msize, version := buf.Tversion()
+	if err = buf.Err(); err != nil {
+		c.enc.Rerror(tag, err.Error())
+		return err
+	}
+
+	if msize < proto.MinMessageSize {
+		c.enc.Rerror(tag, "buffer too small")
+		return errors.New("buffer too small")
+	}
+	if msize < c.msize {
+		c.msize = msize
+	}
+	c.enc.e.MaxMessageSize = c.msize
+	c.dec.MaxMessageSize = c.msize
+
+	if version != proto.Version {
+		version = "unknown"
+	}
+	return c.enc.Rversion(tag, c.msize, version)
+}
 
 func (c *serverConn) Serve() (err error) {
 	for {
@@ -67,7 +103,19 @@ func (c *serverConn) tauth(tag uint16, buf *proto.Buffer)   {}
 func (c *serverConn) tattach(tag uint16, buf *proto.Buffer) {}
 func (c *serverConn) tflush(tag uint16, buf *proto.Buffer)  {}
 
-type Server struct{}
+type Server struct {
+	msize int64
+}
+
+type ServerOption func(*Server) error
+
+func NewServer(opts ...ServerOption) (*Server, error) {
+	return newServer(), nil
+}
+
+func newServer() *Server {
+	return &Server{msize: proto.DefaultMaxMessageSize}
+}
 
 func (s *Server) Listen(listener net.Listener) (err error) {
 	for {
@@ -76,11 +124,15 @@ func (s *Server) Listen(listener net.Listener) (err error) {
 			break
 		}
 
-		go func(conn net.Conn) {
-			c := newServerConn(conn)
-			_ = c.Handshake()
-			_ = c.Serve()
-			c.Close()
+		go func(conn net.Conn) (err error) {
+			c := newServerConn(conn, s.msize)
+			defer c.Close()
+
+			if err = c.Handshake(); err != nil {
+				return err
+			}
+
+			return c.Serve()
 		}(conn)
 	}
 
