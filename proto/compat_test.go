@@ -4,284 +4,361 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/azmodb/ninep/proto/internal/plan9"
 )
 
-var testFcalls = []plan9.Fcall{
-	plan9.Fcall{Type: plan9.Tversion, Tag: plan9.NOTAG, Msize: math.MaxUint32, Version: maxVersionStr},
-	plan9.Fcall{Type: plan9.Rversion, Tag: plan9.NOTAG, Msize: math.MaxUint32, Version: maxVersionStr},
-	plan9.Fcall{Type: plan9.Tversion, Tag: plan9.NOTAG, Msize: 8192, Version: "9P2000"},
-	plan9.Fcall{Type: plan9.Rversion, Tag: plan9.NOTAG, Msize: 8192, Version: "9P2000"},
-
-	plan9.Fcall{Type: plan9.Tauth, Tag: plan9.NOTAG, Afid: plan9.NOFID, Uname: maxUnameStr,
-		Aname: maxNameStr},
-	plan9.Fcall{Type: plan9.Tauth, Tag: plan9.NOTAG, Afid: plan9.NOFID, Uname: "bootes", Aname: "tmp"},
-	plan9.Fcall{Type: plan9.Rauth, Tag: plan9.NOTAG, Aqid: plan9Qids[0]},
-	plan9.Fcall{Type: plan9.Rauth, Tag: plan9.NOTAG, Aqid: plan9Qids[1]},
-	plan9.Fcall{Type: plan9.Rauth, Tag: plan9.NOTAG, Aqid: plan9Qids[2]},
-	plan9.Fcall{Type: plan9.Tattach, Tag: plan9.NOTAG, Fid: 1, Afid: plan9.NOFID, Uname: maxUnameStr,
-		Aname: maxNameStr},
-	plan9.Fcall{Type: plan9.Tattach, Tag: plan9.NOTAG, Fid: 1, Afid: plan9.NOFID, Uname: "bootes",
-		Aname: "tmp"},
-	plan9.Fcall{Type: plan9.Rattach, Tag: plan9.NOTAG, Qid: plan9Qids[0]},
-	plan9.Fcall{Type: plan9.Rattach, Tag: plan9.NOTAG, Qid: plan9Qids[1]},
-	plan9.Fcall{Type: plan9.Rattach, Tag: plan9.NOTAG, Qid: plan9Qids[2]},
-
-	plan9.Fcall{Type: plan9.Tflush, Tag: 42, Oldtag: 41},
-	plan9.Fcall{Type: plan9.Tflush, Tag: math.MaxUint16, Oldtag: math.MaxUint16},
-	plan9.Fcall{Type: plan9.Rflush, Tag: 42},
-	plan9.Fcall{Type: plan9.Rflush, Tag: math.MaxUint16},
-
-	plan9.Fcall{Type: plan9.Twalk, Tag: 42, Fid: 1, Newfid: 2, Wname: []string{"usr", "foo", "d"}},
-	plan9.Fcall{Type: plan9.Twalk, Tag: 2, Fid: plan9.NOFID - 1, Newfid: plan9.NOFID,
-		Wname: []string{
-			maxNameStr, maxNameStr, maxNameStr, maxNameStr,
-			maxNameStr, maxNameStr, maxNameStr, maxNameStr,
-			maxNameStr, maxNameStr, maxNameStr, maxNameStr,
-			maxNameStr, maxNameStr, maxNameStr, maxNameStr,
-		},
-	},
-	plan9.Fcall{Type: plan9.Rwalk, Tag: 42, Wqid: []plan9.Qid{plan9Qids[1], plan9Qids[1]}},
-	plan9.Fcall{Type: plan9.Rwalk, Tag: plan9.NOTAG,
-		Wqid: []plan9.Qid{
-			plan9Qids[0], plan9Qids[0], plan9Qids[0], plan9Qids[0],
-			plan9Qids[0], plan9Qids[0], plan9Qids[0], plan9Qids[0],
-			plan9Qids[0], plan9Qids[0], plan9Qids[0], plan9Qids[0],
-			plan9Qids[0], plan9Qids[0], plan9Qids[0], plan9Qids[0],
-		},
-	},
-
-	plan9.Fcall{Type: plan9.Topen, Tag: 42, Fid: 1, Mode: plan9.OREAD},
-	plan9.Fcall{Type: plan9.Topen, Tag: plan9.NOTAG, Fid: plan9.NOFID, Mode: math.MaxUint8},
-	plan9.Fcall{Type: plan9.Ropen, Tag: 42, Qid: plan9Qids[1], Iounit: 8192},
-	plan9.Fcall{Type: plan9.Ropen, Tag: plan9.NOTAG, Qid: plan9Qids[0], Iounit: math.MaxUint32},
-	plan9.Fcall{Type: plan9.Tcreate, Tag: 42, Fid: 1, Name: "file", Perm: 0644, Mode: plan9.OREAD},
-	plan9.Fcall{Type: plan9.Tcreate, Tag: plan9.NOTAG, Fid: plan9.NOFID, Name: maxNameStr,
-		Perm: math.MaxUint32, Mode: math.MaxUint8},
-	plan9.Fcall{Type: plan9.Rcreate, Tag: 42, Qid: plan9Qids[1], Iounit: 8192},
-	plan9.Fcall{Type: plan9.Rcreate, Tag: plan9.NOTAG, Qid: plan9Qids[0], Iounit: math.MaxUint32},
-
-	plan9.Fcall{Type: plan9.Tread, Tag: 42, Fid: 1, Offset: 0, Count: 8192},
-	plan9.Fcall{Type: plan9.Tread, Tag: plan9.NOTAG, Fid: math.MaxUint32, Offset: math.MaxUint64,
-		Count: math.MaxUint32},
-	plan9.Fcall{Type: plan9.Tread, Tag: 0, Fid: 0, Offset: 0, Count: 0},
-
-	plan9.Fcall{Type: plan9.Rread, Tag: 42, Count: uint32(len(testData)), Data: testData},
-	plan9.Fcall{Type: plan9.Rread, Tag: plan9.NOTAG, Count: uint32(len(testData)),
-		Data: testData},
-	plan9.Fcall{Type: plan9.Rread, Tag: plan9.NOTAG, Count: 0, Data: nil},
-
-	plan9.Fcall{Type: plan9.Twrite, Tag: 42, Fid: 1, Offset: 0, Count: uint32(len(testData)),
-		Data: testData},
-	plan9.Fcall{Type: plan9.Twrite, Tag: plan9.NOTAG, Fid: math.MaxUint32, Offset: math.MaxUint64,
-		Count: uint32(len(testData)), Data: testData},
-	plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 0},
-	plan9.Fcall{Type: plan9.Rwrite, Tag: 42, Count: 8192},
-
-	plan9.Fcall{Type: plan9.Tclunk, Tag: 42, Fid: 42},
-	plan9.Fcall{Type: plan9.Tclunk, Tag: plan9.NOTAG, Fid: math.MaxUint32},
-	plan9.Fcall{Type: plan9.Tclunk, Tag: 0, Fid: 0},
-	plan9.Fcall{Type: plan9.Rclunk, Tag: 42},
-	plan9.Fcall{Type: plan9.Rclunk, Tag: plan9.NOTAG},
-	plan9.Fcall{Type: plan9.Rclunk, Tag: 0},
-	plan9.Fcall{Type: plan9.Tremove, Tag: 42, Fid: 42},
-	plan9.Fcall{Type: plan9.Tremove, Tag: plan9.NOTAG, Fid: math.MaxUint32},
-	plan9.Fcall{Type: plan9.Tremove, Tag: 0, Fid: 0},
-	plan9.Fcall{Type: plan9.Rremove, Tag: 42},
-	plan9.Fcall{Type: plan9.Rremove, Tag: plan9.NOTAG},
-	plan9.Fcall{Type: plan9.Rremove, Tag: 0},
-
-	/*
-		plan9.Fcall{Type: plan9.Tstat, Tag: 42, Fid: 42},
-		//plan9.Fcall{Type: plan9.Rstat, Tag: 42, Stat: testDirBytes},
-		//plan9.Fcall{Type: plan9.Rstat, Tag: plan9.NOTAG, Stat: testMaxDirBytes},
-		//plan9.Fcall{Type: plan9.Twstat, Tag: 42, Fid: 42, Stat: testDirBytes},
-		//plan9.Fcall{Type: plan9.Twstat, Tag: plan9.NOTAG, Fid: plan9.NOFID, Stat: testMaxDirBytes},
-		plan9.Fcall{Type: plan9.Rwstat, Tag: 42},
-
-		plan9.Fcall{Type: plan9.Rerror, Ename: "error message"},
-	*/
-}
-
-var (
-	plan9Dirs = []plan9.Dir{
-		{
-			Type: 0x01, Dev: 42, Qid: plan9.Qid{Type: plan9.QTFILE, Vers: 42, Path: 42}, Mode: 42,
-			Atime: uint32(time.Now().Unix()), Mtime: uint32(time.Now().Unix()), Length: 42,
-			Name: "tmp", Uid: "glenda", Gid: "lab", Muid: "bootes",
-		},
-		{
-			Type: math.MaxUint16, Dev: math.MaxUint16, Qid: plan9Qids[0],
-			Mode: math.MaxUint32, Atime: math.MaxUint32, Mtime: math.MaxUint32,
-			Length: math.MaxUint64, Name: maxNameStr, Uid: maxUnameStr, Gid: maxUnameStr,
-			Muid: maxUnameStr,
-		},
-		{},
-	}
-
-	plan9Qids = []plan9.Qid{
-		{Type: math.MaxUint8, Vers: math.MaxUint32, Path: math.MaxUint64},
-		{Type: 42, Vers: 42, Path: 42},
-		{},
-	}
+const (
+	letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	N           = 8192 // make this bigger for a larger (and slower) test
 )
 
-func cmpQid(t *testing.T, q1 plan9.Qid, q2 Qid) {
+func randString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+const (
+	maxUint64 = math.MaxUint64
+	maxUint32 = math.MaxUint32
+	maxUint16 = math.MaxUint16
+	maxUint8  = math.MaxUint8
+)
+
+var (
+	maxQids     [MaxWalkElements]plan9.Qid
+	maxQid      plan9.Qid
+	maxElements [MaxWalkElements]string
+
+	maxDir = plan9.Dir{
+		Type:  maxUint16,
+		Dev:   maxUint32,
+		Qid:   maxQid,
+		Mode:  maxUint32,
+		Atime: maxUint32,
+		Mtime: maxUint32,
+		Name:  maxDirName,
+		Uid:   maxUserName,
+		Gid:   maxUserName,
+		Muid:  maxUserName,
+	}
+	maxDirData []byte
+
+	maxVersion  string
+	maxUserName string
+	maxDirName  string
+	maxPath     string
+	maxEname    string
+
+	testBytes [N]byte
+)
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+
+	maxQid = plan9.Qid{Type: maxUint8, Vers: maxUint32, Path: maxUint64}
+
+	maxUserName = randString(MaxUserNameSize)
+	maxDirName = randString(MaxDirNameSize)
+	maxPath = randString(MaxPathSize)
+	maxEname = randString(MaxEnameSize)
+
+	for i := 0; i < MaxWalkElements; i++ {
+		maxElements[i] = randString(MaxDirNameSize)
+		maxQids[i] = maxQid
+	}
+
+	for i := 0; i < N; i++ {
+		testBytes[i] = 'a' + byte(i%26)
+	}
+
+	maxDir.Name = maxDirName
+	maxDir.Uid = maxUserName
+	maxDir.Gid = maxUserName
+	maxDir.Muid = maxUserName
+
+	maxDirData, _ = maxDir.Bytes()
+}
+
+var testFcalls = []plan9.Fcall{
+	//plan9.NewVersion(plan9.Tversion, maxUint16, MaxMessageSize, maxVersion),
+	//plan9.NewVersion(plan9.Rversion, maxUint16, MaxMessageSize, maxVersion),
+
+	plan9.NewVersion(plan9.Tversion, 42, 8192, Version),
+	plan9.NewVersion(plan9.Rversion, 42, 8192, Version),
+	plan9.NewVersion(plan9.Tversion, 0, 0, ""),
+	plan9.NewVersion(plan9.Rversion, 0, 0, ""),
+
+	plan9.NewTauth(maxUint16, maxUint32, maxUserName, maxPath),
+	plan9.NewTauth(42, 42, "bootes", "/usr/bootes"),
+	plan9.NewTauth(0, 0, "", ""),
+
+	plan9.NewTattach(maxUint16, maxUint32, maxUint32, maxUserName, maxPath),
+	plan9.NewTattach(42, 42, 43, "bootes", "/usr/bootes"),
+	plan9.NewTattach(0, 0, 0, "", ""),
+
+	plan9.NewRauth(maxUint16, maxQid),
+	plan9.NewRauth(0, plan9.Qid{}),
+	plan9.NewRattach(maxUint16, maxQid),
+	plan9.NewRattach(0, plan9.Qid{}),
+
+	plan9.NewRerror(maxUint16, maxEname),
+	plan9.NewRerror(42, "some error"),
+	plan9.NewRerror(0, ""),
+
+	plan9.NewTflush(maxUint16, maxUint16),
+	plan9.NewTflush(42, 43),
+	plan9.NewTflush(0, 0),
+	plan9.NewRflush(maxUint16),
+	plan9.NewRflush(42),
+	plan9.NewRflush(0),
+
+	plan9.NewTwalk(maxUint16, maxUint32, maxUint32, maxElements[:]),
+	plan9.NewTwalk(42, 20, 21, maxElements[:2]),
+	plan9.NewTwalk(0, 0, 0, nil),
+
+	plan9.NewRwalk(maxUint16, maxQids[:]),
+	plan9.NewRwalk(42, maxQids[:3]),
+	plan9.NewRwalk(0, nil),
+
+	plan9.NewTopen(maxUint16, maxUint32, maxUint8),
+	plan9.NewTopen(42, 43, 44),
+	plan9.NewTopen(0, 0, 0),
+
+	plan9.NewRopen(maxUint16, maxQid, maxUint32),
+	plan9.NewRopen(42, plan9.Qid{Vers: 42}, 44),
+	plan9.NewRopen(0, plan9.Qid{}, 0),
+
+	plan9.NewTcreate(maxUint16, maxUint32, maxDirName, maxUint32, maxUint8),
+	plan9.NewTcreate(42, 43, "newfile", 44, 45),
+	plan9.NewTcreate(0, 0, "", 0, 0),
+
+	plan9.NewRcreate(maxUint16, maxQid, maxUint32),
+	plan9.NewRcreate(42, plan9.Qid{Vers: 42}, 44),
+	plan9.NewRcreate(0, plan9.Qid{}, 0),
+
+	plan9.NewTread(maxUint16, maxUint32, maxUint64, maxUint32),
+	plan9.NewTread(0, 0, 0, 0),
+
+	plan9.NewRread(maxUint16, testBytes[:]),
+	plan9.NewRread(42, testBytes[:26]),
+	plan9.NewRread(0, nil),
+
+	plan9.NewTwrite(maxUint16, maxUint32, maxUint64, testBytes[:]),
+	plan9.NewTwrite(42, 43, 44, testBytes[:26]),
+	plan9.NewTwrite(0, 0, 0, nil),
+
+	plan9.NewRwrite(maxUint16, maxUint32),
+	plan9.NewRwrite(0, 0),
+
+	plan9.NewTclunk(maxUint16, maxUint32),
+	plan9.NewTclunk(42, 43),
+	plan9.NewTclunk(0, 0),
+
+	plan9.NewRclunk(maxUint16),
+	plan9.NewRclunk(42),
+	plan9.NewRclunk(0),
+
+	plan9.NewTremove(maxUint16, maxUint32),
+	plan9.NewTremove(42, 43),
+	plan9.NewTremove(0, 0),
+
+	plan9.NewRremove(maxUint16),
+	plan9.NewRremove(42),
+	plan9.NewRremove(0),
+
+	plan9.NewTstat(maxUint16, maxUint32),
+	plan9.NewTstat(42, 43),
+	plan9.NewTstat(0, 0),
+
+	plan9.NewRstat(maxUint16, maxDirData),
+	plan9.NewRstat(0, nil),
+
+	plan9.NewTwstat(maxUint16, maxUint32, maxDirData),
+	plan9.NewTwstat(0, 0, nil),
+
+	plan9.NewRwstat(maxUint16),
+	plan9.NewRwstat(42),
+	plan9.NewRwstat(0),
+}
+
+func compareQid(a Qid, b plan9.Qid) error {
+	if a.Type != b.Type {
+		return fmt.Errorf("expected qid type (%d), got (%d)", b.Type, a.Type)
+	}
+	if a.Version != b.Vers {
+		return fmt.Errorf("expected qid version (%d), got (%d)", b.Vers, a.Version)
+	}
+	if a.Path != b.Path {
+		return fmt.Errorf("expected qid path (%d), got (%d)", b.Path, a.Path)
+	}
+	return nil
+}
+
+func compareStat(stat Stat, dir plan9.Dir) error {
+	if stat.Type != dir.Type {
+		return fmt.Errorf("expected type (%d), got (%d)", dir.Type, stat.Type)
+	}
+	if stat.Dev != dir.Dev {
+		return fmt.Errorf("expected dev (%d), got (%d)", dir.Dev, stat.Dev)
+	}
+	if err := compareQid(stat.Qid, dir.Qid); err != nil {
+		return err
+	}
+	if stat.Mode != uint32(dir.Mode) {
+		return fmt.Errorf("expected perm (%d), got (%d)", dir.Mode, stat.Mode)
+	}
+	if stat.Atime != dir.Atime {
+		return fmt.Errorf("expected atime (%d), got (%d)", dir.Atime, stat.Atime)
+	}
+	if stat.Mtime != dir.Mtime {
+		return fmt.Errorf("expected mtime (%d), got (%d)", dir.Mtime, stat.Mtime)
+	}
+	if stat.Name != dir.Name {
+		return fmt.Errorf("expected name %q, got %q", dir.Name, stat.Name)
+	}
+	if stat.Uid != dir.Uid {
+		return fmt.Errorf("expected uid %q, got %q", dir.Uid, stat.Uid)
+	}
+	if stat.Gid != dir.Gid {
+		return fmt.Errorf("expected gid %q, got %q", dir.Gid, stat.Gid)
+	}
+	if stat.Muid != dir.Muid {
+		return fmt.Errorf("expected muid %q, got %q", dir.Muid, stat.Muid)
+	}
+	return nil
+}
+
+func TestStatEncodingCompatiblity(t *testing.T) {
+	for i, dir := range []plan9.Dir{plan9.Dir{}, maxDir} {
+		dirBytes, err := dir.Bytes()
+		if err != nil {
+			t.Errorf("stat test[#%d]: cannot marshal plan9 stat: %v", i, err)
+		}
+
+		stat := Stat{}
+		if err := stat.UnmarshalBinary(dirBytes); err != nil {
+			t.Errorf("stat test[#%d]: cannot unmarshal stat: %v", i, err)
+		}
+
+		if err = compareStat(stat, dir); err != nil {
+			t.Errorf("stat test[#%d]: stat differ: %v", i, err)
+		}
+
+		statBytes, err := stat.MarshalBinary()
+		if err != nil {
+			t.Errorf("stat test[#%d]: cannot marshal stat: %v", i, err)
+		}
+
+		if !bytes.Equal(statBytes, dirBytes) {
+			t.Errorf("stat test[#%d]: differ:\n\t%q\n\t%q", i, dirBytes, statBytes)
+		}
+	}
+}
+
+func qidToPlan9Qid(qid Qid) plan9.Qid {
+	return plan9.Qid{Type: qid.Type, Vers: qid.Version, Path: qid.Path}
+}
+
+func qidsToPlan9Qids(qids []Qid) []plan9.Qid {
+	if len(qids) == 0 {
+		return nil
+	}
+
+	v := make([]plan9.Qid, 0, len(qids))
+	for _, qid := range qids {
+		v = append(v, qidToPlan9Qid(qid))
+	}
+	return v
+}
+
+func plan9QidToQid(qid plan9.Qid) Qid {
+	return Qid{Type: qid.Type, Version: qid.Vers, Path: qid.Path}
+}
+
+func plan9QidsToQids(qids []plan9.Qid) []Qid {
+	if len(qids) == 0 {
+		return nil
+	}
+
+	v := make([]Qid, 0, len(qids))
+	for _, qid := range qids {
+		v = append(v, plan9QidToQid(qid))
+	}
+	return v
+}
+
+func encodePlan9Fcall(t *testing.T, enc *Encoder, f *plan9.Fcall) (err error) {
 	t.Helper()
 
-	if q1.Type != q2.Type {
-		t.Fatalf("compare qid: expected type %d, have %d", q1.Type, q2.Type)
+	switch f.Type {
+	case plan9.Tversion:
+		err = enc.Tversion(f.Tag, int64(f.Msize), f.Version)
+	case plan9.Rversion:
+		err = enc.Rversion(f.Tag, int64(f.Msize), f.Version)
+	case plan9.Tauth:
+		err = enc.Tauth(f.Tag, f.Afid, f.Uname, f.Aname)
+	case plan9.Tattach:
+		err = enc.Tattach(f.Tag, f.Fid, f.Afid, f.Uname, f.Aname)
+	case plan9.Rauth:
+		err = enc.Rauth(f.Tag, f.Aqid.Type, f.Aqid.Vers, f.Aqid.Path)
+	case plan9.Rattach:
+		err = enc.Rattach(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path)
+	case plan9.Rerror:
+		err = enc.Rerror(f.Tag, f.Ename)
+	case plan9.Tflush:
+		err = enc.Tflush(f.Tag, f.Oldtag)
+	case plan9.Rflush:
+		err = enc.Rflush(f.Tag)
+	case plan9.Twalk:
+		err = enc.Twalk(f.Tag, f.Fid, f.Newfid, f.Wname...)
+	case plan9.Rwalk:
+		err = enc.Rwalk(f.Tag, plan9QidsToQids(f.Wqid)...)
+	case plan9.Topen:
+		err = enc.Topen(f.Tag, f.Fid, f.Mode)
+	case plan9.Ropen:
+		err = enc.Ropen(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
+	case plan9.Tcreate:
+		err = enc.Tcreate(f.Tag, f.Fid, f.Name, uint32(f.Perm), f.Mode)
+	case plan9.Rcreate:
+		err = enc.Rcreate(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
+	case plan9.Tread:
+		err = enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
+	case plan9.Rread:
+		err = enc.Rread(f.Tag, f.Data)
+	case plan9.Twrite:
+		err = enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
+	case plan9.Rwrite:
+		err = enc.Rwrite(f.Tag, f.Count)
+	case plan9.Tclunk:
+		err = enc.Tclunk(f.Tag, f.Fid)
+	case plan9.Rclunk:
+		err = enc.Rclunk(f.Tag)
+	case plan9.Tremove:
+		err = enc.Tremove(f.Tag, f.Fid)
+	case plan9.Rremove:
+		err = enc.Rremove(f.Tag)
+	case plan9.Tstat:
+		err = enc.Tstat(f.Tag, f.Fid)
+	case plan9.Rstat:
+		err = enc.Rstat(f.Tag, f.Stat)
+	case plan9.Twstat:
+		err = enc.Twstat(f.Tag, f.Fid, f.Stat)
+	case plan9.Rwstat:
+		err = enc.Rwstat(f.Tag)
 	}
-	if q1.Vers != q2.Version {
-		t.Fatalf("compare qid: expected version %d, have %d", q1.Vers, q2.Version)
-	}
-	if q1.Path != q2.Path {
-		t.Fatalf("compare qid: expected path %d, have %d", q1.Path, q2.Path)
-	}
+
+	return err
 }
 
-func cmpDirStat(t *testing.T, dir plan9.Dir, s Stat) {
-	t.Helper()
-
-	if dir.Type != s.Type {
-		t.Fatalf("compare stat: expected type %d, have %d", dir.Type, s.Type)
-	}
-	if dir.Dev != s.Dev {
-		t.Fatalf("compare stat: expected dev %d, have %d", dir.Dev, s.Dev)
-	}
-	cmpQid(t, dir.Qid, s.Qid)
-	if uint32(dir.Mode) != s.Mode {
-		t.Fatalf("compare mode: expected mode %d, have %d", dir.Mode, s.Mode)
-	}
-	if dir.Atime != s.Atime {
-		t.Fatalf("compare stat: expected atime %d, have %d", dir.Atime, s.Atime)
-	}
-	if dir.Mtime != s.Mtime {
-		t.Fatalf("compare stat: expected dev %d, have %d", dir.Mtime, s.Mtime)
-	}
-	if dir.Length != s.Length {
-		t.Fatalf("compare stat: expected dev %d, have %d", dir.Length, s.Length)
-	}
-	if dir.Name != s.Name {
-		t.Fatalf("compare stat: expected name %q, have %q", dir.Name, s.Name)
-	}
-	if dir.Uid != s.UID {
-		t.Fatalf("compare stat: expected uid %q, have %q", dir.Uid, s.UID)
-	}
-	if dir.Gid != s.GID {
-		t.Fatalf("compare stat: expected gid %q, have %q", dir.Gid, s.GID)
-	}
-	if dir.Muid != s.MUID {
-		t.Fatalf("compare stat: expected name %q, have %q", dir.Muid, s.MUID)
-	}
-}
-
-func TestStatCompat(t *testing.T) {
-	for i, dir := range plan9Dirs {
-		data, err := dir.Bytes()
-		if err != nil {
-			t.Fatalf("compat dir #%d: marshal plan9 dir failed: %v", i, err)
-		}
-
-		s := Stat{}
-		if err = s.UnmarshalBinary(data); err != nil {
-			t.Fatalf("compat dir %d: unmarshal stat failed: %v", i, err)
-		}
-
-		cmpDirStat(t, dir, s)
-	}
-}
-
-func TestRstatFcallCompat(t *testing.T) {
-	fcall := plan9.Fcall{Type: plan9.Rstat, Tag: 42}
-	buf := newBuffer(64)
-	enc := newEncoder(&buf)
-	var err error
-
-	for i, dir := range plan9Dirs {
-		fcall.Stat, err = dir.Bytes()
-		if err != nil {
-			t.Fatalf("compat Rstat fcall #%d: marshal plan9 dir failed: %v", i, err)
-		}
-
-		s := Stat{}
-		if err = s.UnmarshalBinary(fcall.Stat); err != nil {
-			t.Fatalf("compat Rstat fcall %d: unmarshal stat failed: %v", i, err)
-		}
-
-		data, err := fcall.Bytes()
-		if err != nil {
-			t.Fatalf("compat Rstat fcall %d: marshal fcall failed: %v", i, err)
-		}
-		if err = enc.Rstat(fcall.Tag, s); err != nil {
-			t.Fatalf("compat Rstat fcall %d: encode failed: %v", i, err)
-		}
-		if !bytes.Equal(data, buf) {
-			t.Fatalf("compat Rstat %d: messages differ\nexpected %q\nhave     %q", i, data, buf)
-		}
-		buf = buf[:0]
-	}
-}
-
-func TestTwstatFcallCompat(t *testing.T) {
-	fcall := plan9.Fcall{Type: plan9.Twstat, Tag: 42, Fid: 42}
-	buf := newBuffer(64)
-	enc := newEncoder(&buf)
-	var err error
-
-	for i, dir := range plan9Dirs {
-		fcall.Stat, err = dir.Bytes()
-		if err != nil {
-			t.Fatalf("compat Twstat fcall #%d: marshal plan9 dir failed: %v", i, err)
-		}
-
-		s := Stat{}
-		if err = s.UnmarshalBinary(fcall.Stat); err != nil {
-			t.Fatalf("compat Twstat fcall %d: unmarshal stat failed: %v", i, err)
-		}
-
-		data, err := fcall.Bytes()
-		if err != nil {
-			t.Fatalf("compat Twstat fcall %d: marshal fcall failed: %v", i, err)
-		}
-		if err = enc.Twstat(fcall.Tag, fcall.Fid, s); err != nil {
-			t.Fatalf("compat Twstat fcall %d: encode failed: %v", i, err)
-		}
-		if !bytes.Equal(data, buf) {
-			t.Fatalf("compat Twstat %d: messages differ\nexpected %q\nhave     %q", i, data, buf)
-		}
-		buf = buf[:0]
-	}
-}
-
-func plan9QidToQid(q plan9.Qid) Qid {
-	return Qid{q.Type, q.Vers, q.Path}
-}
-
-func plan9StatToStat(data []byte) Stat {
-	d, err := plan9.UnmarshalDir(data)
-	if err != nil {
-		panic(fmt.Sprintf("cannot marshal plan9 dir: %v", err))
-	}
-	return Stat{
-		Type:   d.Type,
-		Dev:    d.Dev,
-		Qid:    plan9QidToQid(d.Qid),
-		Mode:   uint32(d.Mode),
-		Atime:  d.Atime,
-		Mtime:  d.Mtime,
-		Length: d.Length,
-		Name:   d.Name,
-		UID:    d.Uid,
-		GID:    d.Gid,
-		MUID:   d.Muid,
-	}
-}
-
-func TestBasicEncoderCompatiblity(t *testing.T) {
+func TestEncoderCompatiblity(t *testing.T) {
 	buf := &bytes.Buffer{}
 	enc := NewEncoder(buf)
 
@@ -290,80 +367,133 @@ func TestBasicEncoderCompatiblity(t *testing.T) {
 
 		data, err := f.Bytes()
 		if err != nil {
-			t.Fatalf("basic enc test[#%d]: cannot marshal 9fans fcall: %v", i, err)
+			t.Errorf("encode test[#%d]: cannot marshal plan9 fcall: %v", i, err)
 		}
 
-		switch f.Type {
-		case plan9.Tversion:
-			err = enc.Tversion(f.Tag, f.Msize, f.Version)
-		case plan9.Rversion:
-			err = enc.Rversion(f.Tag, f.Msize, f.Version)
-		case plan9.Tauth:
-			err = enc.Tauth(f.Tag, f.Afid, f.Uname, f.Aname)
-		case plan9.Rauth:
-			err = enc.Rauth(f.Tag, plan9QidToQid(f.Aqid))
-		case plan9.Tattach:
-			err = enc.Tattach(f.Tag, f.Fid, f.Afid, f.Uname, f.Aname)
-		case plan9.Rattach:
-			err = enc.Rattach(f.Tag, plan9QidToQid(f.Qid))
-		case plan9.Tflush:
-			err = enc.Tflush(f.Tag, f.Oldtag)
-		case plan9.Rflush:
-			err = enc.Rflush(f.Tag)
-		case plan9.Twalk:
-			err = enc.Twalk(f.Tag, f.Fid, f.Newfid, f.Wname...)
-
-		case plan9.Rwalk:
-			qids := make([]Qid, 0, len(f.Wqid))
-			for _, q := range f.Wqid {
-				qids = append(qids, plan9QidToQid(q))
-			}
-			err = enc.Rwalk(f.Tag, qids...)
-
-		case plan9.Topen:
-			enc.Topen(f.Tag, f.Fid, f.Mode)
-		case plan9.Ropen:
-			enc.Ropen(f.Tag, plan9QidToQid(f.Qid), f.Iounit)
-		case plan9.Tcreate:
-			enc.Tcreate(f.Tag, f.Fid, f.Name, uint32(f.Perm), f.Mode)
-		case plan9.Rcreate:
-			enc.Rcreate(f.Tag, plan9QidToQid(f.Qid), f.Iounit)
-		case plan9.Tread:
-			enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
-		case plan9.Rread:
-			enc.Rread(f.Tag, f.Data)
-		case plan9.Twrite:
-			enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
-		case plan9.Rwrite:
-			enc.Rwrite(f.Tag, f.Count)
-		case plan9.Tclunk:
-			enc.Tclunk(f.Tag, f.Fid)
-		case plan9.Rclunk:
-			enc.Rclunk(f.Tag)
-		case plan9.Tremove:
-			enc.Tremove(f.Tag, f.Fid)
-		case plan9.Rremove:
-			enc.Rremove(f.Tag)
-			/*
-				case plan9.Tstat:
-					enc.Tstat(f.Tag, f.Fid)
-				case plan9.Rstat:
-					enc.Rstat(f.Tag, plan9StatToStat(f.Stat))
-				case plan9.Twstat:
-					enc.Twstat(f.Tag, f.Fid, plan9StatToStat(f.Stat))
-				case plan9.Rwstat:
-					enc.Rwstat(f.Tag)
-				case plan9.Rerror:
-					enc.Rerrorf(f.Tag, f.Ename)
-			*/
-		}
+		err = encodePlan9Fcall(t, enc, &f)
 		if err != nil {
-			t.Fatalf("basic enc test[#%d]: error encoding: %v", i, err)
+			t.Errorf("encode test[#%d]: cannot encode plan9 fcall: %v", i, err)
 		}
 
 		if !bytes.Equal(data, buf.Bytes()) {
-			t.Fatalf("basic enc test[#%d]: encoding differ\nwant: %q\nhave: %q",
-				i, data, buf.Bytes())
+			t.Errorf("encode test[#%d]: differ:\n\t%q\n\t%q", i, data, buf.Bytes())
+		}
+	}
+}
+
+func decodePlan9Fcall(buf *FcallBuffer, tag uint16, f, v *plan9.Fcall) error {
+	switch f.Type {
+	case plan9.Tversion:
+		msize, version := buf.Tversion()
+		*v = plan9.NewVersion(plan9.Tversion, tag, uint32(msize), version)
+	case plan9.Rversion:
+		msize, version := buf.Tversion()
+		*v = plan9.NewVersion(plan9.Rversion, tag, uint32(msize), version)
+	case plan9.Tauth:
+		afid, uname, aname := buf.Tauth()
+		*v = plan9.NewTauth(tag, afid, uname, aname)
+	case plan9.Tattach:
+		fid, afid, uname, aname := buf.Tattach()
+		*v = plan9.NewTattach(tag, fid, afid, uname, aname)
+	case plan9.Rauth:
+		typ, version, path := buf.Rauth()
+		*v = plan9.NewRauth(tag, plan9.Qid{path, version, typ})
+	case plan9.Rattach:
+		typ, version, path := buf.Rattach()
+		*v = plan9.NewRattach(tag, plan9.Qid{path, version, typ})
+	case plan9.Rerror:
+		*v = plan9.NewRerror(tag, buf.Rerror())
+	case plan9.Tflush:
+		*v = plan9.NewTflush(tag, buf.Tflush())
+	case plan9.Rflush:
+		*v = plan9.NewRflush(tag)
+	case plan9.Twalk:
+		fid, newfid, names := buf.Twalk()
+		*v = plan9.NewTwalk(tag, fid, newfid, names)
+	case plan9.Rwalk:
+		qids := buf.Rwalk()
+		*v = plan9.NewRwalk(tag, qidsToPlan9Qids(qids))
+	case plan9.Topen:
+		fid, mode := buf.Topen()
+		*v = plan9.NewTopen(tag, fid, mode)
+	case plan9.Ropen:
+		typ, version, path, iounit := buf.Ropen()
+		*v = plan9.NewRopen(tag, plan9.Qid{path, version, typ}, iounit)
+	case plan9.Tcreate:
+		fid, name, perm, mode := buf.Tcreate()
+		*v = plan9.NewTcreate(tag, fid, name, perm, mode)
+	case plan9.Rcreate:
+		typ, version, path, iounit := buf.Rcreate()
+		*v = plan9.NewRcreate(tag, plan9.Qid{path, version, typ}, iounit)
+	case plan9.Tread:
+		fid, offset, count := buf.Tread()
+		*v = plan9.NewTread(tag, fid, offset, count)
+	case plan9.Rread:
+		*v = plan9.NewRread(tag, buf.Rread())
+	case plan9.Twrite:
+		fid, offset, data := buf.Twrite()
+		*v = plan9.NewTwrite(tag, fid, offset, data)
+	case plan9.Rwrite:
+		*v = plan9.NewRwrite(tag, buf.Rwrite())
+	case plan9.Tclunk:
+		*v = plan9.NewTclunk(tag, buf.Tclunk())
+	case plan9.Rclunk:
+		*v = plan9.NewRclunk(tag)
+	case plan9.Tremove:
+		*v = plan9.NewTremove(tag, buf.Tremove())
+	case plan9.Rremove:
+		*v = plan9.NewRremove(tag)
+	case plan9.Tstat:
+		*v = plan9.NewTstat(tag, buf.Tstat())
+	case plan9.Rstat:
+		*v = plan9.NewRstat(tag, buf.Rstat())
+	case plan9.Twstat:
+		fid, data := buf.Twstat()
+		*v = plan9.NewTwstat(tag, fid, data)
+	case plan9.Rwstat:
+		*v = plan9.NewRwstat(tag)
+	}
+	return buf.Err()
+}
+
+func TestDecoderCompatiblity(t *testing.T) {
+	buf := &bytes.Buffer{}
+	dec := NewDecoder(buf)
+	v := plan9.Fcall{}
+
+	for i, f := range testFcalls {
+		buf.Reset()
+
+		data, err := f.Bytes()
+		if err != nil {
+			t.Errorf("decode test[#%d]: cannot marshal plan9 fcall: %v", i, err)
+		}
+
+		buf.Write(data)
+		want := buf.Len() - 7
+
+		typ, tag, b, err := dec.Next()
+		if err != nil {
+			t.Errorf("decode test[#%d]: cannot decode plan9 fcall: %v", i, err)
+		}
+
+		if uint8(typ) != f.Type {
+			t.Errorf("decode test[#%d]: expected type %d, got %d", i, f.Type, typ)
+		}
+		if tag != f.Tag {
+			t.Errorf("decode test[#%d]: expected tag %d, got %d", i, f.Tag, tag)
+		}
+
+		if b.Len() != want {
+			t.Errorf("decode test[#%d]: expected size %d, got %d", i, want, b.Len())
+		}
+
+		v = plan9.Fcall{}
+		if err := decodePlan9Fcall(b, tag, &f, &v); err != nil {
+			t.Errorf("decode test[#%d]: cannot unmarshal fcall: %v", i, err)
+		}
+		if !reflect.DeepEqual(v, f) {
+			t.Errorf("decode test[#%d]: differ:\n\t%v\n\t%v", i, f, v)
 		}
 	}
 }

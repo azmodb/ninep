@@ -2,64 +2,10 @@ package proto
 
 import (
 	"math"
-	"math/rand"
 	"reflect"
 	"testing"
 	"time"
 )
-
-var (
-	maxQid   = Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}
-	emptyQid = Qid{}
-
-	emptyStat = Stat{}
-
-	maxVersionStr string
-	maxUnameStr   string
-	maxNameStr    string
-	testData      []byte
-)
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	maxVersionStr = randString(maxVersionLen)
-	maxUnameStr = randString(maxUnameLen)
-	maxNameStr = randString(MaxNameLen)
-	testData = make([]byte, 8192)
-}
-
-func TestQidEncoding(t *testing.T) {
-	for _, in := range []Qid{
-		Qid{Type: 0x01, Version: 42, Path: 42},
-		maxQid,
-		emptyQid,
-	} {
-		data, err := in.MarshalBinary()
-		if err != nil {
-			t.Fatalf("qid: marshal failed: %v", err)
-		}
-
-		out := Qid{}
-		err = out.UnmarshalBinary(data)
-		if err != nil {
-			t.Fatalf("qid: unmarshal failed: %v", err)
-		}
-
-		if !reflect.DeepEqual(in, out) {
-			t.Fatalf("qid: expected %+v, got %+v", in, out)
-		}
-	}
-}
 
 func TestStatEncoding(t *testing.T) {
 	for _, in := range []Stat{
@@ -67,16 +13,17 @@ func TestStatEncoding(t *testing.T) {
 			Type: 0x01, Dev: 42, Qid: Qid{Type: 0x01, Version: 42, Path: 42},
 			Mode: 42, Atime: uint32(time.Now().Unix()),
 			Mtime: uint32(time.Now().Unix()), Length: 42,
-			Name: "tmp", UID: "glenda", GID: "lab", MUID: "bootes",
+			Name: "tmp", Uid: "glenda", Gid: "lab", Muid: "bootes",
 		},
 		Stat{
-			Type: math.MaxUint16, Dev: math.MaxUint16, Qid: maxQid,
+			Type: math.MaxUint16, Dev: math.MaxUint16,
+			Qid:  plan9QidToQid(maxQid),
 			Mode: math.MaxUint32, Atime: math.MaxUint32,
 			Mtime: math.MaxUint32, Length: math.MaxUint64,
-			Name: maxNameStr, UID: maxUnameStr, GID: maxUnameStr,
-			MUID: maxUnameStr,
+			Name: maxDirName, Uid: maxUserName,
+			Gid: maxUserName, Muid: maxUserName,
 		},
-		emptyStat,
+		Stat{},
 	} {
 		data, err := in.MarshalBinary()
 		if err != nil {
@@ -95,9 +42,25 @@ func TestStatEncoding(t *testing.T) {
 	}
 }
 
-func TestStatLimit(t *testing.T) {
-	s := Stat{}
-	if s.len() != fixedStatLen {
-		t.Fatalf("stat: expected empty len %d, have %d", fixedStatLen, s.len())
+func TestQidEncoding(t *testing.T) {
+	for _, in := range []Qid{
+		Qid{Type: 0x01, Version: 42, Path: 42},
+		plan9QidToQid(maxQid),
+		Qid{},
+	} {
+		data, err := in.MarshalBinary()
+		if err != nil {
+			t.Fatalf("qid: marshal failed: %v", err)
+		}
+
+		out := Qid{}
+		err = out.UnmarshalBinary(data)
+		if err != nil {
+			t.Fatalf("qid: unmarshal failed: %v", err)
+		}
+
+		if !reflect.DeepEqual(in, out) {
+			t.Fatalf("qid: expected %+v, got %+v", in, out)
+		}
 	}
 }
