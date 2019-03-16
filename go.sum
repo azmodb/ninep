@@ -1,2 +1,2 @@
-github.com/azmodb/pkg v0.0.0-20190315182007-345f01adcfe4 h1:O1LC30QPctOtva4ZELW3yTT5JE/dOK+lt+K6bDhhskc=
-github.com/azmodb/pkg v0.0.0-20190315182007-345f01adcfe4/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
+github.com/azmodb/pkg v0.0.1 h1:zTKZ441Njx/AqHord3uSyIGDg9c9xaqiU44d834O6DI=
+github.com/azmodb/pkg v0.0.1/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
