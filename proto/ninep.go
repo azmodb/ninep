@@ -1,5 +1,3 @@
-//go:generate stringer -type FcallType -output strings.go
-
 package proto
 
 import (
@@ -347,4 +345,66 @@ func (s Stat) String() string {
 	return fmt.Sprintf("%q %q %q %s q %v m %#o at %d mt %d l %d t %d d %d",
 		s.Name, s.Uid, s.Gid, s.Muid, s.Qid, s.Mode,
 		s.Atime, s.Mtime, s.Length, s.Type, s.Dev)
+}
+
+func (t FcallType) String() string {
+	switch t {
+	case Tversion:
+		return "Tversion"
+	case Rversion:
+		return "Rversion"
+	case Tauth:
+		return "Tauth"
+	case Rauth:
+		return "Rauth"
+	case Tattach:
+		return "Tattach"
+	case Rattach:
+		return "Rattach"
+	case Terror:
+		return "Terror"
+	case Rerror:
+		return "Rerror"
+	case Tflush:
+		return "Tflush"
+	case Rflush:
+		return "Rflush"
+	case Twalk:
+		return "Twalk"
+	case Rwalk:
+		return "Rwalk"
+	case Topen:
+		return "Topen"
+	case Ropen:
+		return "Ropen"
+	case Tcreate:
+		return "Tcreate"
+	case Rcreate:
+		return "Rcreate"
+	case Tread:
+		return "Tread"
+	case Rread:
+		return "Rread"
+	case Twrite:
+		return "Twrite"
+	case Rwrite:
+		return "Rwrite"
+	case Tclunk:
+		return "Tclunk"
+	case Rclunk:
+		return "Rclunk"
+	case Tremove:
+		return "Tremove"
+	case Rremove:
+		return "Rremove"
+	case Tstat:
+		return "Tstat"
+	case Rstat:
+		return "Rstat"
+	case Twstat:
+		return "Twstat"
+	case Rwstat:
+		return "Rwstat"
+	}
+	return fmt.Sprintf("unknown fcall type (%d)", t)
 }

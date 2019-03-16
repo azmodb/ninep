@@ -295,67 +295,67 @@ func plan9QidsToQids(qids []plan9.Qid) []Qid {
 	return v
 }
 
-func encodePlan9Fcall(t *testing.T, enc *Encoder, f *plan9.Fcall) error {
+func encodePlan9Fcall(t *testing.T, enc *Encoder, f *plan9.Fcall) (err error) {
 	t.Helper()
 
 	switch f.Type {
 	case plan9.Tversion:
-		enc.Tversion(f.Tag, int64(f.Msize), f.Version)
+		err = enc.Tversion(f.Tag, int64(f.Msize), f.Version)
 	case plan9.Rversion:
-		enc.Rversion(f.Tag, int64(f.Msize), f.Version)
+		err = enc.Rversion(f.Tag, int64(f.Msize), f.Version)
 	case plan9.Tauth:
-		enc.Tauth(f.Tag, f.Afid, f.Uname, f.Aname)
+		err = enc.Tauth(f.Tag, f.Afid, f.Uname, f.Aname)
 	case plan9.Tattach:
-		enc.Tattach(f.Tag, f.Fid, f.Afid, f.Uname, f.Aname)
+		err = enc.Tattach(f.Tag, f.Fid, f.Afid, f.Uname, f.Aname)
 	case plan9.Rauth:
-		enc.Rauth(f.Tag, f.Aqid.Type, f.Aqid.Vers, f.Aqid.Path)
+		err = enc.Rauth(f.Tag, f.Aqid.Type, f.Aqid.Vers, f.Aqid.Path)
 	case plan9.Rattach:
-		enc.Rattach(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path)
+		err = enc.Rattach(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path)
 	case plan9.Rerror:
-		enc.Rerror(f.Tag, f.Ename)
+		err = enc.Rerror(f.Tag, f.Ename)
 	case plan9.Tflush:
-		enc.Tflush(f.Tag, f.Oldtag)
+		err = enc.Tflush(f.Tag, f.Oldtag)
 	case plan9.Rflush:
-		enc.Rflush(f.Tag)
+		err = enc.Rflush(f.Tag)
 	case plan9.Twalk:
-		enc.Twalk(f.Tag, f.Fid, f.Newfid, f.Wname...)
+		err = enc.Twalk(f.Tag, f.Fid, f.Newfid, f.Wname...)
 	case plan9.Rwalk:
-		enc.Rwalk(f.Tag, plan9QidsToQids(f.Wqid)...)
+		err = enc.Rwalk(f.Tag, plan9QidsToQids(f.Wqid)...)
 	case plan9.Topen:
-		enc.Topen(f.Tag, f.Fid, f.Mode)
+		err = enc.Topen(f.Tag, f.Fid, f.Mode)
 	case plan9.Ropen:
-		enc.Ropen(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
+		err = enc.Ropen(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
 	case plan9.Tcreate:
-		enc.Tcreate(f.Tag, f.Fid, f.Name, uint32(f.Perm), f.Mode)
+		err = enc.Tcreate(f.Tag, f.Fid, f.Name, uint32(f.Perm), f.Mode)
 	case plan9.Rcreate:
-		enc.Rcreate(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
+		err = enc.Rcreate(f.Tag, f.Qid.Type, f.Qid.Vers, f.Qid.Path, f.Iounit)
 	case plan9.Tread:
-		enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
+		err = enc.Tread(f.Tag, f.Fid, f.Offset, f.Count)
 	case plan9.Rread:
-		enc.Rread(f.Tag, f.Data)
+		err = enc.Rread(f.Tag, f.Data)
 	case plan9.Twrite:
-		enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
+		err = enc.Twrite(f.Tag, f.Fid, f.Offset, f.Data)
 	case plan9.Rwrite:
-		enc.Rwrite(f.Tag, f.Count)
+		err = enc.Rwrite(f.Tag, f.Count)
 	case plan9.Tclunk:
-		enc.Tclunk(f.Tag, f.Fid)
+		err = enc.Tclunk(f.Tag, f.Fid)
 	case plan9.Rclunk:
-		enc.Rclunk(f.Tag)
+		err = enc.Rclunk(f.Tag)
 	case plan9.Tremove:
-		enc.Tremove(f.Tag, f.Fid)
+		err = enc.Tremove(f.Tag, f.Fid)
 	case plan9.Rremove:
-		enc.Rremove(f.Tag)
+		err = enc.Rremove(f.Tag)
 	case plan9.Tstat:
-		enc.Tstat(f.Tag, f.Fid)
+		err = enc.Tstat(f.Tag, f.Fid)
 	case plan9.Rstat:
-		enc.Rstat(f.Tag, f.Stat)
+		err = enc.Rstat(f.Tag, f.Stat)
 	case plan9.Twstat:
-		enc.Twstat(f.Tag, f.Fid, f.Stat)
+		err = enc.Twstat(f.Tag, f.Fid, f.Stat)
 	case plan9.Rwstat:
-		enc.Rwstat(f.Tag)
+		err = enc.Rwstat(f.Tag)
 	}
 
-	return enc.Flush()
+	return err
 }
 
 func TestEncoderCompatiblity(t *testing.T) {
@@ -381,7 +381,7 @@ func TestEncoderCompatiblity(t *testing.T) {
 	}
 }
 
-func decodePlan9Fcall(buf *Buffer, tag uint16, f, v *plan9.Fcall) error {
+func decodePlan9Fcall(buf *FcallBuffer, tag uint16, f, v *plan9.Fcall) error {
 	switch f.Type {
 	case plan9.Tversion:
 		msize, version := buf.Tversion()
