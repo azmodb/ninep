@@ -1,5 +1,9 @@
+go_import_path: github.com/azmodb/ninep
+
 language: go
-go: 
+
+go:
+    - 1.12.x
     - tip
 
 script:
