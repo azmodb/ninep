@@ -13,6 +13,43 @@ import (
 )
 
 const (
+	// FixedReadWriteSize is the length of all fixed-width fields in a
+	// Twrite or Tread message. Twrite and Tread messages are defined as
+	//
+	//     size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
+	//     size[4] Tread  tag[2] fid[4] offset[8] count[4]
+	//
+	FixedReadWriteSize = HeaderSize + 4 + 8 + 4 // 23
+
+	// MaxDataSize is the maximum data size of a Twrite or Rread message.
+	MaxDataSize = math.MaxInt32 - (FixedReadWriteSize + 1) // ~ 2GB
+
+	// MaxNameSize is the maximum length of a filename/username in bytes.
+	MaxNameSize = math.MaxUint8
+
+	// MaxNames is the maximum allowed number of path elements in a Twalk
+	// request.
+	MaxNames = 16
+
+	// MaxMessageSize is the maximum size of a 9P message (Twrite).
+	MaxMessageSize = (FixedReadWriteSize + 1) + MaxDataSize
+
+	// MinMessageSize is the minimum size of a 9P Message (Twalk).
+	MinMessageSize = HeaderSize + 4 + 4 + 2 + MaxNames*(2+MaxNameSize)
+
+	// DefaultMaxDataSize is the default maximum data size of a Twrite or
+	// Rread message.
+	DefaultMaxDataSize = 2 * 1024 * 1024 // ~ 2MB
+
+	// DefaultMaxMessageSize is the default maximum size of a 9P2000.L
+	// message.
+	DefaultMaxMessageSize = (FixedReadWriteSize + 1) + DefaultMaxDataSize
+
+	// HeaderSize is the number of bytes required for a header.
+	HeaderSize = 7
+)
+
+const (
 	// NoFid is a reserved fid used in a Tattach request for the afid
 	// field, that indicates that the client does not wish to
 	// authenticate the session.
