@@ -3,7 +3,6 @@ package proto
 import (
 	"bufio"
 	"io"
-	"math"
 
 	"github.com/azmodb/ninep/binary"
 )

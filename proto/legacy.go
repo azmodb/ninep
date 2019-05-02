@@ -190,15 +190,17 @@ type Tread struct {
 }
 
 // Rread message returns the bytes requested by a Tread message.
-type Rread []byte
+type Rread struct {
+	Data []byte
+}
 
 // String implements fmt.Stringer.
 func (m Rread) String() string {
-	return fmt.Sprintf("data_len:%d", len(m))
+	return fmt.Sprintf("data_len:%d", len(m.Data))
 }
 
 // Len returns the length of the message in bytes.
-func (m Rread) Len() int { return 4 + len(m) }
+func (m Rread) Len() int { return 4 + len(m.Data) }
 
 // Reset resets all state.
 func (m *Rread) Reset() { *m = Rread{} }
@@ -210,10 +212,10 @@ func (m Rread) Encode(buf *binary.Buffer) {}
 func (m *Rread) Decode(buf *binary.Buffer) {}
 
 // Payload returns the payload for sending.
-func (m Rread) Payload() []byte { return m }
+func (m Rread) Payload() []byte { return m.Data }
 
 // PutPayload sets the decoded payload.
-func (m *Rread) PutPayload(b []byte) { *m = b }
+func (m *Rread) PutPayload(b []byte) { m.Data = b }
 
 // FixedLen returns the fixed message size in bytes.
 func (m Rread) FixedLen() int { return 0 }

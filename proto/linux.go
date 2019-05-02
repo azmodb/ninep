@@ -242,15 +242,17 @@ type Treaddir struct {
 }
 
 // Rreaddir message contains a server's reply to a Treaddir message.
-type Rreaddir []byte
+type Rreaddir struct {
+	Data []byte
+}
 
 // String implements fmt.Stringer.
 func (m Rreaddir) String() string {
-	return fmt.Sprintf("data_len:%d", len(m))
+	return fmt.Sprintf("data_len:%d", len(m.Data))
 }
 
 // Len returns the length of the message in bytes.
-func (m Rreaddir) Len() int { return 4 + len(m) }
+func (m Rreaddir) Len() int { return 4 + len(m.Data) }
 
 // Reset resets all state.
 func (m *Rreaddir) Reset() { *m = Rreaddir{} }
@@ -262,10 +264,10 @@ func (m Rreaddir) Encode(buf *binary.Buffer) {}
 func (m *Rreaddir) Decode(buf *binary.Buffer) {}
 
 // Payload returns the payload for sending.
-func (m Rreaddir) Payload() []byte { return m }
+func (m Rreaddir) Payload() []byte { return m.Data }
 
 // PutPayload sets the decoded payload.
-func (m *Rreaddir) PutPayload(b []byte) { *m = b }
+func (m *Rreaddir) PutPayload(b []byte) { m.Data = b }
 
 // FixedLen returns the fixed message size in bytes.
 func (m Rreaddir) FixedLen() int { return 0 }
