@@ -33,6 +33,11 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
+const (
+	ErrMessageTooLarge = Error("message too large")
+	ErrMessageTooSmall = Error("message too small")
+)
+
 // Message represents a 9P message and is used to access fields common to
 // all 9P messages.
 type Message interface {
