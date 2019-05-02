@@ -4,7 +4,6 @@ language: go
 
 go:
     - 1.12.x
-    - tip
 
 script:
      - go test -v ./...
