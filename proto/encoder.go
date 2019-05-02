@@ -45,6 +45,10 @@ func (e *Encoder) maxMessageSize() uint32 {
 }
 
 func (e *Encoder) encHeader(size uint32, h *Header) error {
+	if size > e.maxMessageSize() {
+		return ErrMessageTooLarge
+	}
+
 	e.buf.Reset() // reset message buffer
 
 	e.buf.PutUint32(size)
@@ -79,15 +83,12 @@ func (e *Encoder) Encode(h *Header, m Message) error {
 	if e.err != nil {
 		return e.err
 	}
-	if HeaderSize+m.Len() > math.MaxUint32 {
+
+	if HeaderSize+int64(m.Len()) > maxInt {
 		return ErrMessageTooLarge
 	}
 
 	size := HeaderSize + uint32(m.Len())
-	if size > e.maxMessageSize() {
-		return ErrMessageTooLarge
-	}
-
 	err := e.encHeader(size, h)
 	if err != nil {
 		return err
