@@ -1,2 +1,2 @@
-github.com/azmodb/pkg v0.0.1 h1:zTKZ441Njx/AqHord3uSyIGDg9c9xaqiU44d834O6DI=
-github.com/azmodb/pkg v0.0.1/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
+golang.org/x/sys v0.0.0-20190429190828-d89cdac9e872 h1:cGjJzUd8RgBw428LXP65YXni0aiGNA4Bl+ls8SmLOm8=
+golang.org/x/sys v0.0.0-20190429190828-d89cdac9e872/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
