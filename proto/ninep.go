@@ -55,11 +55,11 @@ const (
 	// authenticate the session.
 	NoFid = math.MaxUint32
 
-	// NoUID indicates a invalid user id.
-	NoUID = math.MaxUint32
+	// NoUid indicates a invalid user id.
+	NoUid = math.MaxUint32
 
-	// NoGID indicates a invalid group id.
-	NoGID = math.MaxUint32
+	// NoGid indicates a invalid group id.
+	NoGid = math.MaxUint32
 
 	// NoTag is the tag for Tversion and Rversion messages.
 	NoTag = math.MaxUint16
