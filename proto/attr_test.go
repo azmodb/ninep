@@ -40,7 +40,7 @@ func TestStatToRgetattr(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 
-	rx := StatToRgetattr(st)
+	rx := UnixStatToRgetattr(st)
 
 	attrBytesEqual(t, st, rx)
 }

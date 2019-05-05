@@ -13,7 +13,7 @@ import (
 func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
-	buf.PutUint8(FileTypeToQidType(uint32(st.Mode))) // marshal Qid
+	buf.PutUint8(UnixFileTypeToQidType(uint32(st.Mode))) // marshal Qid
 	buf.PutUint32(uint32(st.Mtimespec.Nano() ^ st.Size<<8))
 	buf.PutUint64(st.Ino)
 
@@ -35,10 +35,10 @@ func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	return buf.Err()
 }
 
-func StatToRgetattr(st *unix.Stat_t) *Rgetattr {
+func UnixStatToRgetattr(st *unix.Stat_t) *Rgetattr {
 	return &Rgetattr{
 		Qid: Qid{
-			FileTypeToQidType(uint32(st.Mode)),
+			UnixFileTypeToQidType(uint32(st.Mode)),
 			uint32(st.Mtimespec.Nano() ^ st.Size<<8),
 			st.Ino,
 		},

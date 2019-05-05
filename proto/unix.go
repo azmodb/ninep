@@ -18,7 +18,7 @@ func decodeTimespec(buf *binary.Buffer) unix.Timespec {
 	}
 }
 
-func DirectoryTypeToQidType(typ uint8) uint8 {
+func UnixDirTypeToQidType(typ uint8) uint8 {
 	switch typ {
 	//case unix.DT_BLK: ???
 	case unix.DT_CHR, unix.DT_FIFO, unix.DT_SOCK:
@@ -31,7 +31,7 @@ func DirectoryTypeToQidType(typ uint8) uint8 {
 	return typeRegular
 }
 
-func FileTypeToQidType(mode uint32) uint8 {
+func UnixFileTypeToQidType(mode uint32) uint8 {
 	switch mode & unix.S_IFMT {
 	//case unix.S_IFBLK: ???
 	case unix.S_IFCHR, unix.S_IFIFO, unix.S_IFSOCK:
