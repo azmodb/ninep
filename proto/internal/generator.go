@@ -144,6 +144,8 @@ func (g *Generator) genStructLen(s Struct) {
 			g.printf("1")
 		case "Qid":
 			g.printf("13")
+		case "unix.Timespec":
+			g.printf("16")
 		}
 		if i < len(s.Fields)-1 {
 			g.printf("+")
@@ -175,6 +177,8 @@ func (g *Generator) genStructDecode(s Struct) {
 			g.print("m.%s = MessageType(buf.Uint8())", field.Name)
 		case "Qid":
 			g.print("m.%s.Decode(buf)", field.Name)
+		case "unix.Timespec":
+			g.print("m.%s = decodeTimespec(buf)", field.Name)
 		}
 	}
 	g.print("}\n")
@@ -203,6 +207,8 @@ func (g *Generator) genStructEncode(s Struct) {
 			g.print("buf.PutUint8(uint8(m.%s))", field.Name)
 		case "Qid":
 			g.print("m.%s.Encode(buf)", field.Name)
+		case "unix.Timespec":
+			g.print("encodeTimespec(buf, m.%s)", field.Name)
 		}
 	}
 	g.print("}\n")
@@ -255,6 +261,8 @@ func (g *Generator) genStructString(s Struct) {
 			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%s")
 		case "Qid":
 			str += fmt.Sprintf("%s ", "%%s")
+		case "unix.Timespec":
+			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%d")
 		}
 	}
 	if len(str) > 0 {
@@ -262,6 +270,10 @@ func (g *Generator) genStructString(s Struct) {
 	}
 	str += `", `
 	for _, field := range s.Fields {
+		if field.Type == "unix.Timespec" {
+			str += fmt.Sprintf("m.%s.Nano(), ", field.Name)
+			continue
+		}
 		str += fmt.Sprintf("m.%s, ", field.Name)
 	}
 	if len(str) > 1 {
