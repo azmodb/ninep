@@ -10,24 +10,24 @@ import (
 // stat(2) system call.
 //
 // Valid is a bitmask indicating which fields are valid in the response.
-func EncodeStat(buf *binary.Buffer, valid uint64, s *unix.Stat_t) error {
+func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
-	buf.PutUint8(UnixFileTypeToQidType(s.Mode)) // marshal Qid
-	buf.PutUint32(uint32(s.Mtim.Nano() ^ s.Size<<8))
-	buf.PutUint64(s.Ino)
+	buf.PutUint8(FileTypeToQidType(st.Mode)) // marshal Qid
+	buf.PutUint32(uint32(st.Mtim.Nano() ^ st.Size<<8))
+	buf.PutUint64(st.Ino)
 
-	buf.PutUint32(s.Mode)
-	buf.PutUint32(s.Uid)
-	buf.PutUint32(s.Gid)
-	buf.PutUint64(s.Nlink)
-	buf.PutUint64(s.Rdev)
-	buf.PutUint64(uint64(s.Size))
-	buf.PutUint64(uint64(s.Blksize))
-	buf.PutUint64(uint64(s.Blocks))
-	encodeTimespec(buf, s.Atim)
-	encodeTimespec(buf, s.Mtim)
-	encodeTimespec(buf, s.Ctim)
+	buf.PutUint32(st.Mode)
+	buf.PutUint32(st.Uid)
+	buf.PutUint32(st.Gid)
+	buf.PutUint64(st.Nlink)
+	buf.PutUint64(st.Rdev)
+	buf.PutUint64(uint64(st.Size))
+	buf.PutUint64(uint64(st.Blksize))
+	buf.PutUint64(uint64(st.Blocks))
+	encodeTimespec(buf, st.Atim)
+	encodeTimespec(buf, st.Mtim)
+	encodeTimespec(buf, st.Ctim)
 	encodeTimespec(buf, btime)
 	buf.PutUint64(0)
 	buf.PutUint64(0)
@@ -37,6 +37,30 @@ func EncodeStat(buf *binary.Buffer, valid uint64, s *unix.Stat_t) error {
 
 var btime = unix.NsecToTimespec(0)
 
-func EncodeStatfs(buf *binary.Buffer, s *unix.Statfs_t) error {
+func StatToRgetattr(st *unix.Stat_t) *Rgetattr {
+	return &Rgetattr{
+		Qid: Qid{
+			FileTypeToQidType(st.Mode),
+			uint32(st.Mtim.Nano() ^ st.Size<<8),
+			st.Ino,
+		},
+		Mode:        st.Mode,
+		Uid:         st.Uid,
+		Gid:         st.Gid,
+		Nlink:       st.Nlink,
+		Rdev:        st.Rdev,
+		Size:        uint64(st.Size),
+		BlockSize:   uint64(st.Blksize),
+		Blocks:      uint64(st.Blocks),
+		Atime:       st.Atim,
+		Mtime:       st.Mtim,
+		Ctime:       st.Ctim,
+		Btime:       btime,
+		Gen:         0,
+		DataVersion: 0,
+	}
+}
+
+func EncodeStatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
 	return buf.Err()
 }
