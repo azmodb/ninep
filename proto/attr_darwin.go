@@ -5,12 +5,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EncodeAttr encodes information about a file system object. The byte
+// EncodeStat encodes information about a file system object. The byte
 // sequencei follow pretty closely the fields returned by the Linux
 // stat(2) system call.
 //
 // Valid is a bitmask indicating which fields are valid in the response.
-func EncodeAttr(buf *binary.Buffer, valid uint64, s *unix.Stat_t) error {
+func EncodeStat(buf *binary.Buffer, valid uint64, s *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
 	buf.PutUint8(UnixFileTypeToQidType(uint32(s.Mode))) // marshal Qid
