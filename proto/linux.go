@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/azmodb/ninep/binary"
+	"golang.org/x/sys/unix"
 )
 
 // Tlauth message is used to authenticate users on a connection. If the
@@ -178,6 +179,50 @@ type Rreadlink struct {
 type Tgetattr struct {
 	Fid      uint32
 	AttrMask uint64
+}
+
+// Rgetattr describes a file system object. The fields follow pretty
+// closely the fields returned by the Linux stat(2) system call.
+type Rgetattr struct {
+	// Valid is a bitmask indicating which fields are valid in the
+	// response.
+	Valid uint64
+
+	Qid // 13 byte value representing a unique file system object
+
+	Mode      uint32 // inode protection mode
+	Uid       uint32 // user-id of owner
+	Gid       uint32 // group-id of owner
+	Nlink     uint64 // number of hard links to the file
+	Rdev      uint64 // device type, for special file inode
+	Size      uint64 // file size, in bytes
+	BlockSize uint64 // optimal file sys I/O ops blocksize
+	Blocks    uint64
+
+	Atime unix.Timespec // time of last access
+	Mtime unix.Timespec // time of last data modification
+	Ctime unix.Timespec // time of last file status change
+
+	// Btime, Gen and DataVersion fields are reserved for future use.
+	Btime       unix.Timespec
+	Gen         uint64
+	DataVersion uint64
+}
+
+// Tsetattr sets attributes of a file system object referenced by fid.
+type Tsetattr struct {
+	Fid uint32
+
+	// Valid is a bitmask selecting which fields to set.
+	Valid uint32
+
+	Mode uint32 // inode protection mode
+	Uid  uint32 // user-id of owner
+	Gid  uint32 // group-id of owner
+	Size uint64 // file size as handled by Linux truncate(2)
+
+	Atime unix.Timespec // time of last access
+	Mtime unix.Timespec // time of last data modification
 }
 
 // Rsetattr message contains a server's reply to a Tsetattr request.

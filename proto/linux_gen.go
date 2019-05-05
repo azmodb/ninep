@@ -390,6 +390,92 @@ func (m *Tgetattr) Decode(buf *binary.Buffer) {
 }
 
 // String implements fmt.Stringer.
+func (m Rgetattr) String() string {
+	return fmt.Sprintf("valid:%d %s mode:%d uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d", m.Valid, m.Qid, m.Mode, m.Uid, m.Gid, m.Nlink, m.Rdev, m.Size, m.BlockSize, m.Blocks, m.Atime.Nano(), m.Mtime.Nano(), m.Ctime.Nano(), m.Btime.Nano(), m.Gen, m.DataVersion)
+}
+
+// Len returns the length of the message in bytes.
+func (m Rgetattr) Len() int { return 8 + 13 + 4 + 4 + 4 + 8 + 8 + 8 + 8 + 8 + 16 + 16 + 16 + 16 + 8 + 8 }
+
+// Reset resets all state.
+func (m *Rgetattr) Reset() { *m = Rgetattr{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rgetattr) Encode(buf *binary.Buffer) {
+	buf.PutUint64(m.Valid)
+	m.Qid.Encode(buf)
+	buf.PutUint32(m.Mode)
+	buf.PutUint32(m.Uid)
+	buf.PutUint32(m.Gid)
+	buf.PutUint64(m.Nlink)
+	buf.PutUint64(m.Rdev)
+	buf.PutUint64(m.Size)
+	buf.PutUint64(m.BlockSize)
+	buf.PutUint64(m.Blocks)
+	encodeTimespec(buf, m.Atime)
+	encodeTimespec(buf, m.Mtime)
+	encodeTimespec(buf, m.Ctime)
+	encodeTimespec(buf, m.Btime)
+	buf.PutUint64(m.Gen)
+	buf.PutUint64(m.DataVersion)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rgetattr) Decode(buf *binary.Buffer) {
+	m.Valid = buf.Uint64()
+	m.Qid.Decode(buf)
+	m.Mode = buf.Uint32()
+	m.Uid = buf.Uint32()
+	m.Gid = buf.Uint32()
+	m.Nlink = buf.Uint64()
+	m.Rdev = buf.Uint64()
+	m.Size = buf.Uint64()
+	m.BlockSize = buf.Uint64()
+	m.Blocks = buf.Uint64()
+	m.Atime = decodeTimespec(buf)
+	m.Mtime = decodeTimespec(buf)
+	m.Ctime = decodeTimespec(buf)
+	m.Btime = decodeTimespec(buf)
+	m.Gen = buf.Uint64()
+	m.DataVersion = buf.Uint64()
+}
+
+// String implements fmt.Stringer.
+func (m Tsetattr) String() string {
+	return fmt.Sprintf("fid:%d valid:%d mode:%d uid:%d gid:%d size:%d atime:%d mtime:%d", m.Fid, m.Valid, m.Mode, m.Uid, m.Gid, m.Size, m.Atime.Nano(), m.Mtime.Nano())
+}
+
+// Len returns the length of the message in bytes.
+func (m Tsetattr) Len() int { return 4 + 4 + 4 + 4 + 4 + 8 + 16 + 16 }
+
+// Reset resets all state.
+func (m *Tsetattr) Reset() { *m = Tsetattr{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tsetattr) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.Fid)
+	buf.PutUint32(m.Valid)
+	buf.PutUint32(m.Mode)
+	buf.PutUint32(m.Uid)
+	buf.PutUint32(m.Gid)
+	buf.PutUint64(m.Size)
+	encodeTimespec(buf, m.Atime)
+	encodeTimespec(buf, m.Mtime)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tsetattr) Decode(buf *binary.Buffer) {
+	m.Fid = buf.Uint32()
+	m.Valid = buf.Uint32()
+	m.Mode = buf.Uint32()
+	m.Uid = buf.Uint32()
+	m.Gid = buf.Uint32()
+	m.Size = buf.Uint64()
+	m.Atime = decodeTimespec(buf)
+	m.Mtime = decodeTimespec(buf)
+}
+
+// String implements fmt.Stringer.
 func (m Rsetattr) String() string { return "" }
 
 // Len returns the length of the message in bytes.
