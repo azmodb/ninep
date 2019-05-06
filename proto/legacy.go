@@ -118,6 +118,9 @@ func (m *Twalk) Decode(buf *binary.Buffer) {
 	if size > 16 {
 		size = 16
 	}
+	if size == 0 {
+		return
+	}
 	m.Names = make([]string, size)
 	for i := range m.Names {
 		m.Names[i] = buf.String()
@@ -173,6 +176,9 @@ func (m *Rwalk) Decode(buf *binary.Buffer) {
 	size := buf.Uint16()
 	if size > 16 {
 		size = 16
+	}
+	if size == 0 {
+		return
 	}
 	*m = make([]Qid, size)
 	for i := range *m {
