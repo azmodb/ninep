@@ -71,7 +71,13 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
+	// ErrMessageTooLarge is returned during the parsing process if a
+	// message exceeds the maximum size negotiated during the
+	// Tversion/Rversion transaction.
 	ErrMessageTooLarge = Error("message too large")
+
+	// ErrMessageTooSmall is returned during the parsing process if a
+	// message is too small.
 	ErrMessageTooSmall = Error("message too small")
 )
 

@@ -33,6 +33,12 @@ var customTestPackets = []packet{
 		DataVersion: math.MaxUint64,
 	}, &Rgetattr{}},
 	packet{&Rgetattr{}, &Rgetattr{}},
+
+	packet{&Twalk{}, &Twalk{}},
+	packet{&Twalk{Fid: math.MaxUint32, NewFid: math.MaxUint32, Names: testNames}, &Twalk{}},
+
+	packet{testRwalk, &Rwalk{}},
+	packet{&Rwalk{}, &Rwalk{}},
 }
 
 func init() {
@@ -41,9 +47,20 @@ func init() {
 
 	string16 = strings.Builder{}
 	for i := 0; i < math.MaxUint16; i++ {
+		if i < math.MaxUint8 {
+			string8.WriteByte('a' + byte(i%26))
+		}
 		string16.WriteByte('a' + byte(i%26))
 	}
 	bytes16 = []byte(string16.String())
+
+	testNames = make([]string, MaxNames)
+	testQids = make([]Qid, MaxNames)
+	for i := 0; i < MaxNames; i++ {
+		testNames[i] = string8.String()
+		testQids[i] = testQid
+	}
+	*testRwalk = Rwalk(testQids)
 }
 
 type packet struct {
@@ -52,8 +69,14 @@ type packet struct {
 }
 
 var (
-	string16    strings.Builder
-	bytes16     []byte
+	string16 strings.Builder
+	string8  strings.Builder
+	bytes16  []byte
+
+	testQid     = Qid{math.MaxUint8, math.MaxUint32, math.MaxUint64}
+	testQids    []Qid
+	testRwalk   = &Rwalk{}
+	testNames   []string
 	testPackets []packet
 )
 
@@ -81,6 +104,7 @@ func TestCodec(t *testing.T) {
 			t.Errorf("codec(%d): expected message size %d, got %d",
 				n, test.in.Len(), test.out.Len())
 		}
+		test.out.Reset()
 	}
 }
 
