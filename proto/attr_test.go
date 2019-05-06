@@ -8,7 +8,26 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func attrBytesEqual(t *testing.T, st *unix.Stat_t, rx *Rgetattr) {
+func statfsBytesEqual(t *testing.T, st *unix.Statfs_t, rx *Rstatfs) {
+	t.Helper()
+	b1, b2 := &binary.Buffer{}, &binary.Buffer{}
+
+	if err := EncodeStatfs(b1, st); err != nil {
+		t.Fatalf("statfs: unexpected marshal error: %v", err)
+	}
+
+	rx.Encode(b2)
+	if err := b2.Err(); err != nil {
+		t.Fatalf("statfs: unexpected marshal error: %v", err)
+	}
+
+	if !bytes.Equal(b1.Bytes(), b2.Bytes()) {
+		t.Fatalf("statfs: buffers differ\nwant %q\ngot  %q",
+			b2.Bytes(), b1.Bytes())
+	}
+}
+
+func statBytesEqual(t *testing.T, st *unix.Stat_t, rx *Rgetattr) {
 	t.Helper()
 	b1, b2 := &binary.Buffer{}, &binary.Buffer{}
 
@@ -31,7 +50,7 @@ func TestEmptyStatEncoding(t *testing.T) {
 	st := &unix.Stat_t{}
 	rx := &Rgetattr{}
 
-	attrBytesEqual(t, st, rx)
+	statBytesEqual(t, st, rx)
 }
 
 func TestStatToRgetattr(t *testing.T) {
@@ -42,5 +61,12 @@ func TestStatToRgetattr(t *testing.T) {
 
 	rx := UnixStatToRgetattr(st)
 
-	attrBytesEqual(t, st, rx)
+	statBytesEqual(t, st, rx)
+}
+
+func TestEmptyStatfsEncoding(t *testing.T) {
+	st := &unix.Statfs_t{}
+	rx := &Rstatfs{NameLength: 255}
+
+	statfsBytesEqual(t, st, rx)
 }
