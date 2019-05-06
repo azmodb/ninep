@@ -71,41 +71,41 @@ func (q *Qid) Unmarshal(data []byte) ([]byte, error) {
 // represented as a bit vector corresponding to the high 8 bits of the
 // file mode word.
 const (
-	typeDirectory  = 0x80
-	typeAppendOnly = 0x40
-	typeExclusive  = 0x20
-	typeMount      = 0x10
-	typeAuth       = 0x08
-	typeTemporary  = 0x04
-	typeSymlink    = 0x02
-	typeLink       = 0x01
-	typeRegular    = 0x00
+	TypeDirectory  = 0x80
+	TypeAppendOnly = 0x40
+	TypeExclusive  = 0x20
+	TypeMount      = 0x10
+	TypeAuth       = 0x08
+	TypeTemporary  = 0x04
+	TypeSymlink    = 0x02
+	TypeLink       = 0x01
+	TypeRegular    = 0x00
 )
 
 func (q Qid) String() string {
 	t := ""
-	if q.Type&typeDirectory != 0 {
+	if q.Type&TypeDirectory != 0 {
 		t += "d"
 	}
-	if q.Type&typeAppendOnly != 0 {
+	if q.Type&TypeAppendOnly != 0 {
 		t += "a"
 	}
-	if q.Type&typeExclusive != 0 {
+	if q.Type&TypeExclusive != 0 {
 		t += "l"
 	}
-	if q.Type&typeMount != 0 {
+	if q.Type&TypeMount != 0 {
 		t += "m"
 	}
-	if q.Type&typeAuth != 0 {
+	if q.Type&TypeAuth != 0 {
 		t += "A"
 	}
-	if q.Type&typeTemporary != 0 {
+	if q.Type&TypeTemporary != 0 {
 		t += "t"
 	}
-	if q.Type&typeSymlink != 0 {
+	if q.Type&TypeSymlink != 0 {
 		t += "S"
 	}
-	if q.Type&typeLink != 0 {
+	if q.Type&TypeLink != 0 {
 		t += "L"
 	}
 	if len(t) == 0 {
