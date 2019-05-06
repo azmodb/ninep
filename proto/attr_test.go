@@ -2,6 +2,7 @@ package proto
 
 import (
 	"bytes"
+	"runtime"
 	"testing"
 
 	"github.com/azmodb/ninep/binary"
@@ -66,7 +67,10 @@ func TestStatToRgetattr(t *testing.T) {
 
 func TestEmptyStatfsEncoding(t *testing.T) {
 	st := &unix.Statfs_t{}
-	rx := &Rstatfs{NameLength: 255}
+	rx := &Rstatfs{}
+	if runtime.GOOS == "darwin" {
+		rx.NameLength = 255
+	}
 
 	statfsBytesEqual(t, st, rx)
 }
