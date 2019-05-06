@@ -2,6 +2,7 @@ package proto
 
 import (
 	"bytes"
+	"errors"
 	"math"
 	"reflect"
 	"testing"
@@ -155,6 +156,17 @@ func TestPayloadEncoding(t *testing.T) {
 		R Payloader
 	}{
 		{
+			Header: Header{Type: MessageRreaddir, Tag: math.MaxUint16},
+			M:      &Rreaddir{},
+			R:      &Rreaddir{},
+		},
+		{
+			Header: Header{Type: MessageRreaddir, Tag: math.MaxUint16},
+			M:      &Rreaddir{bytes16},
+			R:      &Rreaddir{},
+		},
+
+		{
 			Header: Header{Type: MessageRread, Tag: math.MaxUint16},
 			M:      &Rread{},
 			R:      &Rread{},
@@ -164,6 +176,7 @@ func TestPayloadEncoding(t *testing.T) {
 			M:      &Rread{bytes16},
 			R:      &Rread{},
 		},
+
 		{
 			Header: Header{Type: MessageTwrite, Tag: math.MaxUint16},
 			M:      &Twrite{},
@@ -207,5 +220,49 @@ func TestPayloadEncoding(t *testing.T) {
 		if !reflect.DeepEqual(test.M, test.R) {
 			t.Errorf("msg(%d): messages differ\n%+v\n+%v", n, test.M, test.R)
 		}
+	}
+}
+
+func TestDecoderMessageTooSmall(t *testing.T) {
+	data := make([]byte, 0, HeaderSize)
+	data = binary.PutUint32(data, HeaderSize-1)
+	data = data[:HeaderSize]
+
+	buf := bytes.NewBuffer(data)
+	dec := NewDecoder(buf, 0)
+
+	err := dec.DecodeHeader(nil)
+	if err != ErrMessageTooSmall {
+		t.Fatalf("decoder: expected ErrMessageTooSmall, got %T", err)
+	}
+}
+
+func TestDecoderMessageTooLarge(t *testing.T) {
+	maxMessageSize := uint32(32)
+
+	data := make([]byte, 0, HeaderSize)
+	data = binary.PutUint32(data, maxMessageSize+1)
+	data = data[:HeaderSize]
+
+	buf := bytes.NewBuffer(data)
+	dec := NewDecoder(buf, maxMessageSize)
+
+	err := dec.DecodeHeader(nil)
+	if err != ErrMessageTooLarge {
+		t.Fatalf("decoder: expected ErrMessageTooLarge, got %v", err)
+	}
+}
+
+var errTest = errors.New("test error")
+
+func TestErrDecoder(t *testing.T) {
+	dec := NewDecoder(nil, 0)
+	dec.err = errTest
+
+	if err := dec.DecodeHeader(nil); err != errTest {
+		t.Errorf("decoder: expected decode error, got %v", err)
+	}
+	if err := dec.Decode(nil); err != errTest {
+		t.Errorf("decoder: expected decode error, got %v", err)
 	}
 }
