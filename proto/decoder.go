@@ -80,6 +80,9 @@ func (d *Decoder) DecodeHeader(h *Header) error {
 // pointer to the correct type for the next 9P message received. If the
 // input is at EOF, Decode returns io.EOF and does not modify e.
 func (d *Decoder) Decode(m Message) error {
+	if d.err != nil {
+		return d.err
+	}
 	if d.pending <= 0 {
 		return nil
 	}
