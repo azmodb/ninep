@@ -369,7 +369,7 @@ func (m *Rreadlink) Decode(buf *binary.Buffer) {
 }
 
 // String implements fmt.Stringer.
-func (m Tgetattr) String() string { return fmt.Sprintf("fid:%d attr_mask:%d", m.Fid, m.AttrMask) }
+func (m Tgetattr) String() string { return fmt.Sprintf("fid:%d request_mask:%d", m.Fid, m.RequestMask) }
 
 // Len returns the length of the message in bytes.
 func (m Tgetattr) Len() int { return 4 + 8 }
@@ -380,13 +380,13 @@ func (m *Tgetattr) Reset() { *m = Tgetattr{} }
 // Encode encodes to the given binary.Buffer.
 func (m Tgetattr) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.Fid)
-	buf.PutUint64(m.AttrMask)
+	buf.PutUint64(m.RequestMask)
 }
 
 // Decode decodes from the given binary.Buffer.
 func (m *Tgetattr) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
-	m.AttrMask = buf.Uint64()
+	m.RequestMask = buf.Uint64()
 }
 
 // String implements fmt.Stringer.
@@ -600,3 +600,298 @@ func (m *Treaddir) Decode(buf *binary.Buffer) {
 	m.Offset = buf.Uint64()
 	m.Count = buf.Uint32()
 }
+
+// String implements fmt.Stringer.
+func (m Tfsync) String() string { return fmt.Sprintf("fid:%d", m.Fid) }
+
+// Len returns the length of the message in bytes.
+func (m Tfsync) Len() int { return 4 }
+
+// Reset resets all state.
+func (m *Tfsync) Reset() { *m = Tfsync{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tfsync) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.Fid)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tfsync) Decode(buf *binary.Buffer) {
+	m.Fid = buf.Uint32()
+}
+
+// String implements fmt.Stringer.
+func (m Rfsync) String() string { return "" }
+
+// Len returns the length of the message in bytes.
+func (m Rfsync) Len() int { return 0 }
+
+// Reset resets all state.
+func (m *Rfsync) Reset() { *m = Rfsync{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rfsync) Encode(buf *binary.Buffer) {}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rfsync) Decode(buf *binary.Buffer) {}
+
+// String implements fmt.Stringer.
+func (m Tlock) String() string {
+	return fmt.Sprintf("fid:%d type:%d flags:%d start:%d length:%d proc_id:%d client_id:%q", m.Fid, m.Type, m.Flags, m.Start, m.Length, m.ProcID, m.ClientID)
+}
+
+// Len returns the length of the message in bytes.
+func (m Tlock) Len() int { return 4 + 1 + 4 + 8 + 8 + 4 + 2 + len(m.ClientID) }
+
+// Reset resets all state.
+func (m *Tlock) Reset() { *m = Tlock{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tlock) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.Fid)
+	buf.PutUint8(m.Type)
+	buf.PutUint32(m.Flags)
+	buf.PutUint64(m.Start)
+	buf.PutUint64(m.Length)
+	buf.PutUint32(m.ProcID)
+	buf.PutString(m.ClientID)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tlock) Decode(buf *binary.Buffer) {
+	m.Fid = buf.Uint32()
+	m.Type = buf.Uint8()
+	m.Flags = buf.Uint32()
+	m.Start = buf.Uint64()
+	m.Length = buf.Uint64()
+	m.ProcID = buf.Uint32()
+	m.ClientID = buf.String()
+}
+
+// String implements fmt.Stringer.
+func (m Rlock) String() string { return fmt.Sprintf("status:%d", m.Status) }
+
+// Len returns the length of the message in bytes.
+func (m Rlock) Len() int { return 1 }
+
+// Reset resets all state.
+func (m *Rlock) Reset() { *m = Rlock{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rlock) Encode(buf *binary.Buffer) {
+	buf.PutUint8(m.Status)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rlock) Decode(buf *binary.Buffer) {
+	m.Status = buf.Uint8()
+}
+
+// String implements fmt.Stringer.
+func (m Tgetlock) String() string {
+	return fmt.Sprintf("fid:%d type:%d start:%d length:%d proc_id:%d client_id:%q", m.Fid, m.Type, m.Start, m.Length, m.ProcID, m.ClientID)
+}
+
+// Len returns the length of the message in bytes.
+func (m Tgetlock) Len() int { return 4 + 1 + 8 + 8 + 4 + 2 + len(m.ClientID) }
+
+// Reset resets all state.
+func (m *Tgetlock) Reset() { *m = Tgetlock{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tgetlock) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.Fid)
+	buf.PutUint8(m.Type)
+	buf.PutUint64(m.Start)
+	buf.PutUint64(m.Length)
+	buf.PutUint32(m.ProcID)
+	buf.PutString(m.ClientID)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tgetlock) Decode(buf *binary.Buffer) {
+	m.Fid = buf.Uint32()
+	m.Type = buf.Uint8()
+	m.Start = buf.Uint64()
+	m.Length = buf.Uint64()
+	m.ProcID = buf.Uint32()
+	m.ClientID = buf.String()
+}
+
+// String implements fmt.Stringer.
+func (m Rgetlock) String() string {
+	return fmt.Sprintf("type:%d start:%d length:%d proc_id:%d client_id:%q", m.Type, m.Start, m.Length, m.ProcID, m.ClientID)
+}
+
+// Len returns the length of the message in bytes.
+func (m Rgetlock) Len() int { return 1 + 8 + 8 + 4 + 2 + len(m.ClientID) }
+
+// Reset resets all state.
+func (m *Rgetlock) Reset() { *m = Rgetlock{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rgetlock) Encode(buf *binary.Buffer) {
+	buf.PutUint8(m.Type)
+	buf.PutUint64(m.Start)
+	buf.PutUint64(m.Length)
+	buf.PutUint32(m.ProcID)
+	buf.PutString(m.ClientID)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rgetlock) Decode(buf *binary.Buffer) {
+	m.Type = buf.Uint8()
+	m.Start = buf.Uint64()
+	m.Length = buf.Uint64()
+	m.ProcID = buf.Uint32()
+	m.ClientID = buf.String()
+}
+
+// String implements fmt.Stringer.
+func (m Tlink) String() string {
+	return fmt.Sprintf("directory_fid:%d target:%d name:%q", m.DirectoryFid, m.Target, m.Name)
+}
+
+// Len returns the length of the message in bytes.
+func (m Tlink) Len() int { return 4 + 4 + 2 + len(m.Name) }
+
+// Reset resets all state.
+func (m *Tlink) Reset() { *m = Tlink{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tlink) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.DirectoryFid)
+	buf.PutUint32(m.Target)
+	buf.PutString(m.Name)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tlink) Decode(buf *binary.Buffer) {
+	m.DirectoryFid = buf.Uint32()
+	m.Target = buf.Uint32()
+	m.Name = buf.String()
+}
+
+// String implements fmt.Stringer.
+func (m Rlink) String() string { return "" }
+
+// Len returns the length of the message in bytes.
+func (m Rlink) Len() int { return 0 }
+
+// Reset resets all state.
+func (m *Rlink) Reset() { *m = Rlink{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rlink) Encode(buf *binary.Buffer) {}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rlink) Decode(buf *binary.Buffer) {}
+
+// String implements fmt.Stringer.
+func (m Tmkdir) String() string {
+	return fmt.Sprintf("directory_fid:%d name:%q permission:%d gid:%d", m.DirectoryFid, m.Name, m.Permission, m.Gid)
+}
+
+// Len returns the length of the message in bytes.
+func (m Tmkdir) Len() int { return 4 + 2 + len(m.Name) + 4 + 4 }
+
+// Reset resets all state.
+func (m *Tmkdir) Reset() { *m = Tmkdir{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tmkdir) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.DirectoryFid)
+	buf.PutString(m.Name)
+	buf.PutUint32(m.Permission)
+	buf.PutUint32(m.Gid)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tmkdir) Decode(buf *binary.Buffer) {
+	m.DirectoryFid = buf.Uint32()
+	m.Name = buf.String()
+	m.Permission = buf.Uint32()
+	m.Gid = buf.Uint32()
+}
+
+// String implements fmt.Stringer.
+func (m Trenameat) String() string {
+	return fmt.Sprintf("old_directory_fid:%d old_name:%q new_directory_fid:%d new_name:%q", m.OldDirectoryFid, m.OldName, m.NewDirectoryFid, m.NewName)
+}
+
+// Len returns the length of the message in bytes.
+func (m Trenameat) Len() int { return 4 + 2 + len(m.OldName) + 4 + 2 + len(m.NewName) }
+
+// Reset resets all state.
+func (m *Trenameat) Reset() { *m = Trenameat{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Trenameat) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.OldDirectoryFid)
+	buf.PutString(m.OldName)
+	buf.PutUint32(m.NewDirectoryFid)
+	buf.PutString(m.NewName)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Trenameat) Decode(buf *binary.Buffer) {
+	m.OldDirectoryFid = buf.Uint32()
+	m.OldName = buf.String()
+	m.NewDirectoryFid = buf.Uint32()
+	m.NewName = buf.String()
+}
+
+// String implements fmt.Stringer.
+func (m Rrenameat) String() string { return "" }
+
+// Len returns the length of the message in bytes.
+func (m Rrenameat) Len() int { return 0 }
+
+// Reset resets all state.
+func (m *Rrenameat) Reset() { *m = Rrenameat{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rrenameat) Encode(buf *binary.Buffer) {}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rrenameat) Decode(buf *binary.Buffer) {}
+
+// String implements fmt.Stringer.
+func (m Tunlinkat) String() string {
+	return fmt.Sprintf("directory_fid:%d name:%q flags:%d", m.DirectoryFid, m.Name, m.Flags)
+}
+
+// Len returns the length of the message in bytes.
+func (m Tunlinkat) Len() int { return 4 + 2 + len(m.Name) + 4 }
+
+// Reset resets all state.
+func (m *Tunlinkat) Reset() { *m = Tunlinkat{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Tunlinkat) Encode(buf *binary.Buffer) {
+	buf.PutUint32(m.DirectoryFid)
+	buf.PutString(m.Name)
+	buf.PutUint32(m.Flags)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Tunlinkat) Decode(buf *binary.Buffer) {
+	m.DirectoryFid = buf.Uint32()
+	m.Name = buf.String()
+	m.Flags = buf.Uint32()
+}
+
+// String implements fmt.Stringer.
+func (m Runlinkat) String() string { return "" }
+
+// Len returns the length of the message in bytes.
+func (m Runlinkat) Len() int { return 0 }
+
+// Reset resets all state.
+func (m *Runlinkat) Reset() { *m = Runlinkat{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Runlinkat) Encode(buf *binary.Buffer) {}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Runlinkat) Decode(buf *binary.Buffer) {}

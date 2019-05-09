@@ -177,9 +177,37 @@ type Rreadlink struct {
 
 // Tgetattr gets attributes of a file system object referenced by fid.
 type Tgetattr struct {
-	Fid      uint32
-	AttrMask uint64
+	Fid uint32
+
+	// RequestMask is a bitmask indicating which fields are requested.
+	RequestMask uint64
 }
+
+// Represents getattr mask values.
+const (
+	GetAttrMode  = 0x00000001 // Linux chmod(2) mode bits
+	GetAttrNlink = 0x00000002
+
+	// New owner, group of the file as described in Linux chown(2).
+	GetAttrUid = 0x00000004
+	GetAttrGid = 0x00000008
+
+	GetAttrRdev  = 0x00000010
+	GetAttrAtime = 0x00000020 // Time of last file access.
+	GetAttrMtime = 0x00000040 // Time of last file modification.
+	GetAttrCtime = 0x00000080
+	GetAttrIno   = 0x00000100
+
+	// New file size as handled by Linux truncate(2).
+	GetAttrSize        = 0x00000200
+	GetAttrBlocks      = 0x00000400
+	GetAttrBtime       = 0x00000800
+	GetAttrGen         = 0x00001000
+	GetAttrDataVersion = 0x00002000
+
+	GetAttrBasic = 0x000007ff
+	GetAttrAll   = 0x00003fff
+)
 
 // Rgetattr describes a file system object. The fields follow pretty
 // closely the fields returned by the Linux stat(2) system call.
@@ -224,6 +252,19 @@ type Tsetattr struct {
 	Atime unix.Timespec // time of last access
 	Mtime unix.Timespec // time of last data modification
 }
+
+// Represents setattr mask values.
+const (
+	SetAttrMode     = 0x00000001
+	SetAttrUid      = 0x00000002
+	SetAttrGid      = 0x00000004
+	SetAttrSize     = 0x00000008
+	SetAttrAtime    = 0x00000010
+	SetAttrMtime    = 0x00000020
+	SetAttrCtime    = 0x00000040
+	SetAttrAtimeSet = 0x00000080
+	SetAttrMtimeSet = 0x00000100
+)
 
 // Rsetattr message contains a server's reply to a Tsetattr request.
 type Rsetattr struct{}
@@ -316,3 +357,102 @@ func (m *Rreaddir) PutPayload(b []byte) { m.Data = b }
 
 // FixedLen returns the fixed message size in bytes.
 func (m Rreaddir) FixedLen() int { return 0 }
+
+// Tfsync flushes any cached data to disk.
+type Tfsync struct {
+	Fid uint32
+}
+
+// Rfsync message contains a server's reply to a Tfsync message.
+type Rfsync struct{}
+
+// Tlock  acquires or releases a POSIX record lock and has semantics
+// similar to Linux fcntl(F_SETLK).
+type Tlock struct {
+	Fid      uint32
+	Type     uint8
+	Flags    uint32
+	Start    uint64
+	Length   uint64
+	ProcID   uint32
+	ClientID string
+}
+
+// Rlock message contains a server's reply to a Tlock message.
+type Rlock struct {
+	Status uint8
+}
+
+// Tgetlock tests for the existence of a POSIX record lock and has
+// semantics similar to Linux fcntl(F_GETLK).
+type Tgetlock struct {
+	Fid      uint32
+	Type     uint8
+	Start    uint64
+	Length   uint64
+	ProcID   uint32
+	ClientID string
+}
+
+// Rgetlock message contains a server's reply to a Tgetlock message.
+type Rgetlock struct {
+	Type     uint8
+	Start    uint64
+	Length   uint64
+	ProcID   uint32
+	ClientID string
+}
+
+// Tlink creates a hard link name in directory dfid. The link target is
+// referenced by fid.
+type Tlink struct {
+	DirectoryFid uint32
+	Target       uint32
+	Name         string
+}
+
+// Rlink message contains a server's reply to a Tlink message.
+type Rlink struct{}
+
+// Tmkdir creates a new directory name in parent directory fid. Mode
+// contains Linux mkdir(2) mode bits. Gid is the effective group ID of
+// the caller.
+type Tmkdir struct {
+	DirectoryFid uint32
+	Name         string
+	Permission   uint32
+	Gid          uint32
+}
+
+// Rmkdir message contains a server's reply to a Tmkdir message.
+type Rmkdir = Qid
+
+// Trenameat changes the name of a file from oldname to newname, possible
+// moving it from old directory represented by fid to new directory
+// represented by new fid.
+//
+// If the server returns unix.ENOTSUPP, the client should fall back to
+// the rename operation.
+type Trenameat struct {
+	OldDirectoryFid uint32
+	OldName         string
+	NewDirectoryFid uint32
+	NewName         string
+}
+
+// Rrenameat message contains a server's reply to a Trenameat message.
+type Rrenameat struct{}
+
+// Tunlinkat unlinks name from directory represented by directory fid. If
+// the file is represented by a fid, that fid is not clunked.
+//
+// If the server returns unix.ENOTSUPP, the client should fall back to
+// the remove operation.
+type Tunlinkat struct {
+	DirectoryFid uint32
+	Name         string
+	Flags        uint32
+}
+
+// Runlinkat message contains a server's reply to a Tunlinkat message.
+type Runlinkat struct{}

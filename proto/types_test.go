@@ -14,6 +14,14 @@ var customTestPackets = []packet{
 	packet{&Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}, &Qid{}},
 	packet{&Qid{}, &Qid{}},
 
+	packet{&Dirent{
+		Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
+		math.MaxUint64,
+		math.MaxUint8,
+		string16.String(),
+	}, &Dirent{}},
+	packet{&Dirent{}, &Dirent{}},
+
 	packet{&Rgetattr{
 		Valid:       math.MaxUint64,
 		Qid:         Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
@@ -141,6 +149,31 @@ func TestQidCodec(t *testing.T) {
 
 		if !reflect.DeepEqual(in, out) {
 			t.Errorf("qid(%d): qid differ\n%v\n%v", n, in, out)
+		}
+
+	}
+}
+
+func TestDirentCodec(t *testing.T) {
+	buf := make([]byte, 0, 24)
+	for n, test := range customTestPackets[2:4] {
+		in, out := test.in.(*Dirent), test.out.(*Dirent)
+		buf = buf[:0]
+
+		buf, m, err := in.Marshal(buf)
+		if err != nil {
+			t.Fatalf("dirent(%d): marshal error: %v", n, err)
+		}
+		if m != 24 {
+			t.Fatalf("dirent(%d): expected marshal length 24, got %d", n, m)
+		}
+
+		if _, err = out.Unmarshal(buf); err != nil {
+			t.Fatalf("dirent(%d): unmarshal error: %v", n, err)
+		}
+
+		if !reflect.DeepEqual(in, out) {
+			t.Errorf("dirent(%d): dirent differ\n%v\n%v", n, in, out)
 		}
 
 	}
