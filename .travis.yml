@@ -1,9 +1,13 @@
 go_import_path: github.com/azmodb/ninep
-
 language: go
-
 go:
     - 1.12.x
+
+services:
+    - docker
+
+before_install:
+    - bash diod.bash
 
 script:
      - go test -v ./...
