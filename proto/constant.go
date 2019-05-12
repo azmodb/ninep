@@ -148,6 +148,9 @@ func (t MessageType) String() string {
 	case MessageRlattach:
 		return "Rlattach"
 
+	case MessageRlerror:
+		return "Rlerror"
+
 	case MessageTstatfs:
 		return "Tstatfs"
 	case MessageRstatfs:

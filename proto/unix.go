@@ -18,8 +18,7 @@ type Dirent struct {
 
 // String implements fmt.Stringer.
 func (m Dirent) String() string {
-	return fmt.Sprintf("%s offset:%d type:%d name:%q",
-		m.Qid, m.Offset, m.Type, m.Name)
+	return fmt.Sprintf("%s offset:%d type:%d name:%q", m.Qid, m.Offset, m.Type, m.Name)
 }
 
 // Len returns the length of the message in bytes.

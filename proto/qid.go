@@ -111,5 +111,5 @@ func (q Qid) String() string {
 	if len(t) == 0 {
 		t = "unknown"
 	}
-	return fmt.Sprintf("type:%s version:%d path:%.16x", t, q.Version, q.Path)
+	return fmt.Sprintf("type:%q version:%d path:%.16x", t, q.Version, q.Path)
 }
