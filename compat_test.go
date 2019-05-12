@@ -3,6 +3,7 @@ package ninep
 import (
 	"context"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/azmodb/pkg/log"
@@ -35,7 +36,9 @@ func TestCompatHandshake(t *testing.T) {
 	}
 }
 
-func newTestClient(t *testing.T) *Client {
+func newCompatTestClient(t *testing.T) *Client {
+	t.Helper()
+
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
 	if err != nil {
 		t.Fatalf("cannot dial diod test-server: %v", err)
@@ -44,7 +47,9 @@ func newTestClient(t *testing.T) *Client {
 }
 
 func TestCompatAttach(t *testing.T) {
-	c := newTestClient(t)
+	t.Parallel()
+
+	c := newCompatTestClient(t)
 	defer c.Close()
 
 	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
@@ -56,4 +61,25 @@ func TestCompatAttach(t *testing.T) {
 			t.Fatalf("compat clunk: %v", err)
 		}
 	}()
+}
+
+func TestCompatCreateRemove(t *testing.T) {
+	t.Parallel()
+
+	c := newCompatTestClient(t)
+	defer c.Close()
+
+	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
+	if err != nil {
+		t.Fatalf("compat attach: %v", err)
+	}
+	defer f.Close()
+
+	if err = f.Create("file42", os.O_RDONLY, 0644); err != nil {
+		t.Fatalf("compat create: %v", err)
+	}
+
+	if err = f.Remove(); err != nil {
+		t.Fatalf("compat remove: %v", err)
+	}
 }

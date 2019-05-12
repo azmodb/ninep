@@ -33,12 +33,15 @@ func (fi fileInfo) IsDir() bool {
 
 func (fi fileInfo) Sys() interface{} { return fi.rx }
 
+// Fid represents a remote file descriptor.
 type Fid struct {
 	c    *Client
 	path string
 	num  uint32
 	uid  uint32
 	gid  uint32
+
+	iounit uint32
 }
 
 func (f *Fid) Num() uint32 { return f.num }
@@ -68,18 +71,45 @@ func (f *Fid) Stat() (os.FileInfo, error) {
 	return fileInfo{name: path.Base(f.path), rx: rx}, nil
 }
 
-/*
 func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
-	_ = &proto.Tlcreate{
+	if isReserved(name) {
+		return unix.EINVAL
+	}
+
+	tx := &proto.Tlcreate{
 		Fid:        f.num,
 		Name:       name,
 		Flags:      uint32(proto.NewFlag(flag)),
 		Permission: uint32(proto.NewFileMode(perm)),
-		Gid:        0, // TODO
+		Gid:        f.gid,
 	}
+	rx := &proto.Rlcreate{}
+	if err := f.c.rpc(proto.MessageTlcreate, tx, rx); err != nil {
+		return err
+	}
+
+	f.iounit = rx.Iounit
 	return nil
 }
-*/
+
+func (f *Fid) Open(flag int) error {
+	tx := &proto.Tlopen{
+		Fid:   f.num,
+		Flags: uint32(proto.NewFlag(flag)),
+	}
+	rx := &proto.Rlopen{}
+	if err := f.c.rpc(proto.MessageTlopen, tx, rx); err != nil {
+		return err
+	}
+
+	f.iounit = rx.Iounit
+	return nil
+}
+
+func (f *Fid) Remove() error {
+	tx, rx := &proto.Tremove{Fid: f.num}, &proto.Rremove{}
+	return f.c.rpc(proto.MessageTremove, tx, rx)
+}
 
 // isReserved returns whetever name is a reserved filesystem name.
 func isReserved(name string) bool {
