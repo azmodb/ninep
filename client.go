@@ -72,7 +72,7 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 
 	go c.recv()
 
-	if err := c.tversion(); err != nil {
+	if err := c.handshake(); err != nil {
 		c.Close()
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (c *Client) recv() (err error) {
 	return err
 }
 
-func (c *Client) tversion() error {
+func (c *Client) handshake() error {
 	tx := &proto.Tversion{MessageSize: c.maxMessageSize, Version: version}
 	rx := &proto.Rversion{}
 	if err := c.rpc(proto.MessageTversion, tx, rx); err != nil {
@@ -233,6 +233,51 @@ func (c *Client) tversion() error {
 	}
 	return nil
 }
+
+// Auth initiates an authentication handshake for the given user and root
+// path. An error is returned if authentication is not required. If
+// successful, the returned afid is used to read/write the authentication
+// handshake (protocol does not specify what is read/written), and afid
+// is presented in the attach.
+func (c *Client) Auth(export, user string, uid uint32) (*Fid, error) {
+	return nil, errors.New("auth not implemented")
+}
+
+// Attach introduces a new user to the server, and establishes Fid as the
+// root for that user on the file tree selected by export.
+func (c *Client) Attach(auth *Fid, export, user string, uid uint32) (*Fid, error) {
+	fidnum, ok := c.fid.Get()
+	if !ok {
+		return nil, errFidOverflow
+	}
+
+	authnum := uint32(proto.NoFid)
+	if auth != nil {
+		authnum = auth.Num()
+	}
+
+	tx := &proto.Tlattach{
+		AuthFid:  authnum,
+		Fid:      fidnum,
+		Path:     export,
+		UserName: user,
+		Uid:      uid,
+	}
+	rx := &proto.Rlattach{}
+	if err := c.rpc(proto.MessageTlattach, tx, rx); err != nil {
+		return nil, err
+	}
+
+	return newFid(c, "/", fidnum, rx), nil
+}
+
+type Fid struct{}
+
+func newFid(c *Client, name string, num uint32, qid *proto.Qid) *Fid {
+	return nil
+}
+
+func (f *Fid) Num() uint32 { return 0 }
 
 type pool struct {
 	mu  sync.Mutex
