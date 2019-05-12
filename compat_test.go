@@ -4,11 +4,15 @@ import (
 	"context"
 	"math"
 	"testing"
+
+	"github.com/azmodb/pkg/log"
 )
 
 const diodTestServerAddr = "127.0.0.1:5640"
 
 const diodMaxMessageSize = 64 * 1024
+
+func init() { log.SetLevel(log.InfoLevel) }
 
 func TestCompatHandshake(t *testing.T) {
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
