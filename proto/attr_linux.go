@@ -10,7 +10,7 @@ import (
 // stat(2) system call.
 //
 // Valid is a bitmask indicating which fields are valid in the response.
-func EncodeStat(buf *binary.Buffer, valid uint64, stat *unix.Stat_t) error {
+func EncodeStat(buf *binary.Buffer, valid uint64, stat *Stat) error {
 	buf.PutUint64(valid)
 
 	buf.PutUint8(UnixFileTypeToQidType(stat.Mode)) // marshal Qid
@@ -40,7 +40,7 @@ var btime = unix.NsecToTimespec(0)
 
 // UnixStatToRgetattr converts a unix.Stat_t returned by the stat(2)
 // system call.
-func UnixStatToRgetattr(stat *unix.Stat_t) *Rgetattr {
+func UnixStatToRgetattr(stat *Stat) *Rgetattr {
 	return &Rgetattr{
 		Qid: Qid{
 			UnixFileTypeToQidType(stat.Mode),
@@ -69,7 +69,7 @@ func UnixStatToRgetattr(stat *unix.Stat_t) *Rgetattr {
 // EncodeStatfs encodes information about a file system. The byte
 // sequence follow pretty closely the fields returned by the Linux
 // statfs(2) system call.
-func EncodeStatfs(buf *binary.Buffer, stat *unix.Statfs_t) error {
+func EncodeStatfs(buf *binary.Buffer, stat *StatFS) error {
 	buf.PutUint32(uint32(stat.Type))
 	buf.PutUint32(uint32(stat.Bsize))
 	buf.PutUint64(stat.Blocks)
