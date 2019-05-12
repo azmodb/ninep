@@ -299,22 +299,11 @@ type Fid struct {
 	num  uint32
 	uid  uint32
 	gid  uint32
-
-	mu      sync.Mutex
-	closing bool
 }
 
 func (f *Fid) Num() uint32 { return f.num }
 
 func (f *Fid) Close() error {
-	f.mu.Lock()
-	if f.closing {
-		f.mu.Unlock()
-		return errors.New("fid not opened for I/O")
-	}
-	f.closing = true
-	f.mu.Unlock()
-
 	tx, rx := &proto.Tclunk{Fid: f.num}, &proto.Rclunk{}
 	if err := f.c.rpc(proto.MessageTclunk, tx, rx); err != nil {
 		return err
