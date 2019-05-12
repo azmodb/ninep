@@ -13,7 +13,7 @@ func statfsBytesEqual(t *testing.T, st *unix.Statfs_t, rx *Rstatfs) {
 	t.Helper()
 	b1, b2 := &binary.Buffer{}, &binary.Buffer{}
 
-	if err := EncodeStatfs(b1, st); err != nil {
+	if err := EncodeStatFS(b1, st); err != nil {
 		t.Fatalf("statfs: unexpected marshal error: %v", err)
 	}
 

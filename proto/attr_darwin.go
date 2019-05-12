@@ -61,10 +61,10 @@ func UnixStatToRgetattr(stat *Stat) *Rgetattr {
 	}
 }
 
-// EncodeStatfs encodes information about a file system. The byte
+// EncodeStatFS encodes information about a file system. The byte
 // sequence follow pretty closely the fields returned by the Linux
 // statfs(2) system call.
-func EncodeStatfs(buf *binary.Buffer, stat *StatFS) error {
+func EncodeStatFS(buf *binary.Buffer, stat *StatFS) error {
 	buf.PutUint32(stat.Type)
 	buf.PutUint32(stat.Bsize)
 	buf.PutUint64(stat.Blocks)
