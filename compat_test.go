@@ -43,8 +43,13 @@ func TestCompatAttach(t *testing.T) {
 	c := newTestClient(t)
 	defer c.Close()
 
-	_, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
+	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
 	if err != nil {
 		t.Fatalf("compat attach: %v", err)
 	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Fatalf("compat clunk: %v", err)
+		}
+	}()
 }
