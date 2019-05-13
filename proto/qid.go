@@ -15,7 +15,7 @@ type Qid struct {
 
 	// Version is a version:number for a file. It is incremented every
 	// time a file is modified. By convention, synthetic files usually
-	// have a verison number of 0. Traditional files have a version
+	// have a version number of 0. Traditional files have a version
 	// numb:r that is a hash of their modification time.
 	Version uint32
 

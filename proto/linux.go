@@ -29,7 +29,7 @@ type Tlauth struct {
 	// access. It may be empty.
 	Path string
 
-	// Uid is the user numercial identifiery of the attaching user.
+	// Uid is the user numerical identifiery of the attaching user.
 	Uid uint32
 }
 
@@ -56,7 +56,7 @@ type Tlattach struct {
 	// access. It may be empty.
 	Path string
 
-	// Uid is the user numercial identifiery of the attaching user.
+	// Uid is the user numerical identifiery of the attaching user.
 	Uid uint32
 }
 

@@ -38,7 +38,7 @@ func join(elem ...string) string { return filepath.Join(elem...) }
 
 // split slices path into all names separated by filepath.Separator and
 // returns a slice of the path elements between filepath.Separator.
-// If path is emtpy or represents the root split returns an empty slice.
+// If path is empty or represents the root split returns an empty slice.
 func split(path string) []string {
 	for len(path) > 0 && path[0] == filepath.Separator {
 		path = path[1:]
