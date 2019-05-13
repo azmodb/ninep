@@ -11,18 +11,18 @@ import (
 )
 
 var customTestPackets = []packet{
-	packet{&Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}, &Qid{}},
-	packet{&Qid{}, &Qid{}},
+	{&Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}, &Qid{}},
+	{&Qid{}, &Qid{}},
 
-	packet{&Dirent{
+	{&Dirent{
 		Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
 		math.MaxUint64,
 		math.MaxUint8,
 		string16.String(),
 	}, &Dirent{}},
-	packet{&Dirent{}, &Dirent{}},
+	{&Dirent{}, &Dirent{}},
 
-	packet{&Rgetattr{
+	{&Rgetattr{
 		Valid:       math.MaxUint64,
 		Qid:         Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
 		Mode:        math.MaxUint32,
@@ -40,13 +40,13 @@ var customTestPackets = []packet{
 		Gen:         math.MaxUint64,
 		DataVersion: math.MaxUint64,
 	}, &Rgetattr{}},
-	packet{&Rgetattr{}, &Rgetattr{}},
+	{&Rgetattr{}, &Rgetattr{}},
 
-	packet{&Twalk{}, &Twalk{}},
-	packet{&Twalk{Fid: math.MaxUint32, NewFid: math.MaxUint32, Names: testNames}, &Twalk{}},
+	{&Twalk{}, &Twalk{}},
+	{&Twalk{Fid: math.MaxUint32, NewFid: math.MaxUint32, Names: testNames}, &Twalk{}},
 
-	packet{testRwalk, &Rwalk{}},
-	packet{&Rwalk{}, &Rwalk{}},
+	{testRwalk, &Rwalk{}},
+	{&Rwalk{}, &Rwalk{}},
 }
 
 func init() {
