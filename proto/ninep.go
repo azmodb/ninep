@@ -49,6 +49,9 @@ const (
 	HeaderSize = 7
 )
 
+// Version defines the protocol version string.
+const Version = "9P2000.L"
+
 const (
 	// NoFid is a reserved fid used in a Tattach request for the afid
 	// field, that indicates that the client does not wish to

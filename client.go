@@ -220,13 +220,13 @@ func (c *Client) recv() (err error) {
 }
 
 func (c *Client) handshake() error {
-	tx := &proto.Tversion{MessageSize: c.maxMessageSize, Version: version}
+	tx := &proto.Tversion{MessageSize: c.maxMessageSize, Version: proto.Version}
 	rx := &proto.Rversion{}
 	if err := c.rpc(proto.MessageTversion, tx, rx); err != nil {
 		return err
 	}
 	if rx.Version != tx.Version {
-		return errors.New("server does not support " + version)
+		return errors.New("server does not support " + proto.Version)
 	}
 	if rx.MessageSize != c.maxMessageSize {
 		c.maxMessageSize = rx.MessageSize
