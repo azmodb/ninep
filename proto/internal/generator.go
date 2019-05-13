@@ -290,12 +290,12 @@ func (g *Generator) genStructReset(s Struct) {
 }
 
 func (g *Generator) genStructTest(s Struct) {
-	g.print("packet{&%s{}, &%s{}},", s.Name, s.Name)
+	g.print("{&%s{}, &%s{}},", s.Name, s.Name)
 	if len(s.Fields) == 0 {
 		return
 	}
 
-	g.printf("packet{&%s{", s.Name)
+	g.printf("{&%s{", s.Name)
 	for _, field := range s.Fields {
 		switch field.Type {
 		case "string":
