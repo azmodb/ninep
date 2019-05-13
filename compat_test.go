@@ -1,3 +1,5 @@
+// +build compat
+
 package ninep
 
 import (
@@ -5,15 +7,13 @@ import (
 	"math"
 	"os"
 	"testing"
-
-	"github.com/azmodb/pkg/log"
 )
+
+// func init() { log.SetLevel(log.InfoLevel) }
 
 const diodTestServerAddr = "127.0.0.1:5640"
 
 const diodMaxMessageSize = 64 * 1024
-
-func init() { log.SetLevel(log.InfoLevel) }
 
 func TestCompatHandshake(t *testing.T) {
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
@@ -75,7 +75,7 @@ func TestCompatCreateRemove(t *testing.T) {
 	}
 	defer f.Close()
 
-	if err = f.Create("file42", os.O_RDONLY, 0644); err != nil {
+	if err = f.Create("create_remove_test", os.O_RDONLY, 0644); err != nil {
 		t.Fatalf("compat create: %v", err)
 	}
 
@@ -83,3 +83,24 @@ func TestCompatCreateRemove(t *testing.T) {
 		t.Fatalf("compat remove: %v", err)
 	}
 }
+
+// func TestCompatMkdirRemove(t *testing.T) {
+// 	t.Parallel()
+
+// 	c := newCompatTestClient(t)
+// 	defer c.Close()
+
+// 	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
+// 	if err != nil {
+// 		t.Fatalf("compat attach: %v", err)
+// 	}
+// 	defer f.Close()
+
+// 	if err = f.Mkdir("mkdir_remove_test", 0755); err != nil {
+// 		t.Fatalf("compat mkdir: %v", err)
+// 	}
+
+// 	// if err = f.Remove(); err != nil {
+// 	// 	t.Fatalf("compat remove: %v", err)
+// 	// }
+// }

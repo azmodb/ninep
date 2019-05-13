@@ -37,14 +37,18 @@ type Client struct {
 	shutdown bool
 }
 
+// Option sets Server or Client options such as logging, max message
+// size etc.
+type Option func(*Client) error
+
 // Dial connects to an 9P2000.L server at the specified network address.
 //
 // The provided Context must be non-nil. If the context expires before
 // the connection is complete, an error is returned. Once successfully
 // connected, any expiration of the context will not affect the
 // connection.
-func Dial(ctx context.Context, network, addr string, opts ...Option) (*Client, error) {
-	conn, err := (&net.Dialer{}).DialContext(ctx, network, addr)
+func Dial(ctx context.Context, network, address string, opts ...Option) (*Client, error) {
+	conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +246,7 @@ func (c *Client) handshake() error {
 // is presented in the attach.
 func (c *Client) Auth(export, username string, uid int) (*Fid, error) {
 	if uid < 0 || uid > math.MaxUint32 {
-		return nil, unix.EINVAL
+		return nil, errInvalidUid
 	}
 
 	return nil, errors.New("auth not implemented")
@@ -251,11 +255,11 @@ func (c *Client) Auth(export, username string, uid int) (*Fid, error) {
 // Attach introduces a new user to the server, and establishes Fid as the
 // root for that user on the file tree selected by export.
 func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, error) {
-	if export = path.Clean(export); !path.IsAbs(export) {
-		return nil, unix.EINVAL
+	if export = path.Clean(export); !path.IsAbs(export) || isReserved(export) {
+		return nil, errInvalildName
 	}
-	if isReserved(export) || uid < 0 || uid > math.MaxUint32 {
-		return nil, unix.EINVAL
+	if uid < 0 || uid > math.MaxUint32 {
+		return nil, errInvalidUid
 	}
 
 	fidnum, ok := c.fid.Get()
