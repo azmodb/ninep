@@ -355,7 +355,7 @@ func checkZero(t *testing.T, v interface{}) {
 func TestNilBuffer(t *testing.T) {
 	buf := &Buffer{}
 
-	buf.String() // initial call
+	_ = buf.String() // initial call
 
 	checkZero(t, buf.String())
 	checkZero(t, buf.Uint64())
