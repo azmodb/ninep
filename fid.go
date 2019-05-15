@@ -22,17 +22,14 @@ func (fi fileInfo) Name() string { return fi.name }
 func (fi fileInfo) Size() int64  { return int64(fi.rx.Size) }
 
 func (fi fileInfo) Mode() os.FileMode {
-	return proto.FileMode(fi.rx.Mode).FileMode()
+	return fi.rx.Mode.FileMode()
 }
 
 func (fi fileInfo) ModTime() time.Time {
 	return time.Unix(fi.rx.Mtime.Sec, fi.rx.Mtime.Nsec)
 }
 
-func (fi fileInfo) IsDir() bool {
-	return fi.rx.Mode&unix.S_IFMT == unix.S_IFDIR
-}
-
+func (fi fileInfo) IsDir() bool      { return fi.rx.IsDir() }
 func (fi fileInfo) Sys() interface{} { return fi.rx }
 
 var (
@@ -121,11 +118,11 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 	defer f.mu.Unlock()
 
 	tx := &proto.Tlcreate{
-		Fid:        f.num,
-		Name:       name,
-		Flags:      uint32(proto.NewFlag(flag)),
-		Permission: uint32(proto.NewFileMode(perm)),
-		Gid:        f.gid,
+		Fid:   f.num,
+		Name:  name,
+		Flags: proto.NewFlag(flag),
+		Perm:  proto.NewMode(perm),
+		Gid:   f.gid,
 	}
 	rx := &proto.Rlcreate{}
 	if err := f.c.rpc(proto.MessageTlcreate, tx, rx); err != nil {
@@ -151,7 +148,7 @@ func (f *Fid) Mkdir(name string, perm os.FileMode) error {
 	tx := &proto.Tmkdir{
 		DirectoryFid: f.num,
 		Name:         name,
-		Permission:   uint32(proto.NewFileMode(perm)),
+		Perm:         proto.NewMode(perm),
 		Gid:          f.gid,
 	}
 	rx := &proto.Rmkdir{}
@@ -168,7 +165,7 @@ func (f *Fid) Open(flag int) error {
 		return errFidOpened
 	}
 
-	tx := &proto.Tlopen{Fid: f.num, Flags: uint32(proto.NewFlag(flag))}
+	tx := &proto.Tlopen{Fid: f.num, Flags: proto.NewFlag(flag)}
 	rx := &proto.Rlopen{}
 	if err := f.c.rpc(proto.MessageTlopen, tx, rx); err != nil {
 		return err
