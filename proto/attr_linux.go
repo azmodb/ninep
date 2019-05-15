@@ -48,7 +48,7 @@ func UnixStatToRgetattr(stat *Stat) *Rgetattr {
 			stat.Ino,
 		},
 
-		Mode:      stat.Mode,
+		Mode:      Mode(stat.Mode),
 		Uid:       stat.Uid,
 		Gid:       stat.Gid,
 		Nlink:     stat.Nlink,

@@ -152,13 +152,13 @@ func (m *Tlopen) Reset() { *m = Tlopen{} }
 // Encode encodes to the given binary.Buffer.
 func (m Tlopen) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.Fid)
-	buf.PutUint32(m.Flags)
+	buf.PutUint32(uint32(m.Flags))
 }
 
 // Decode decodes from the given binary.Buffer.
 func (m *Tlopen) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
-	m.Flags = buf.Uint32()
+	m.Flags = Flag(buf.Uint32())
 }
 
 // String implements fmt.Stringer.
@@ -184,7 +184,7 @@ func (m *Rlopen) Decode(buf *binary.Buffer) {
 
 // String implements fmt.Stringer.
 func (m Tlcreate) String() string {
-	return fmt.Sprintf("fid:%d name:%q flags:%d permission:%d gid:%d", m.Fid, m.Name, m.Flags, m.Permission, m.Gid)
+	return fmt.Sprintf("fid:%d name:%q flags:%d perm:%q gid:%d", m.Fid, m.Name, m.Flags, m.Perm, m.Gid)
 }
 
 // Len returns the length of the message in bytes.
@@ -197,8 +197,8 @@ func (m *Tlcreate) Reset() { *m = Tlcreate{} }
 func (m Tlcreate) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.Fid)
 	buf.PutString(m.Name)
-	buf.PutUint32(m.Flags)
-	buf.PutUint32(m.Permission)
+	buf.PutUint32(uint32(m.Flags))
+	buf.PutUint32(uint32(m.Perm))
 	buf.PutUint32(m.Gid)
 }
 
@@ -206,8 +206,8 @@ func (m Tlcreate) Encode(buf *binary.Buffer) {
 func (m *Tlcreate) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 	m.Name = buf.String()
-	m.Flags = buf.Uint32()
-	m.Permission = buf.Uint32()
+	m.Flags = Flag(buf.Uint32())
+	m.Perm = Mode(buf.Uint32())
 	m.Gid = buf.Uint32()
 }
 
@@ -261,7 +261,7 @@ func (m *Tsymlink) Decode(buf *binary.Buffer) {
 
 // String implements fmt.Stringer.
 func (m Tmknod) String() string {
-	return fmt.Sprintf("directory_fid:%d name:%q permission:%d major:%d minor:%d gid:%d", m.DirectoryFid, m.Name, m.Permission, m.Major, m.Minor, m.Gid)
+	return fmt.Sprintf("directory_fid:%d name:%q perm:%q major:%d minor:%d gid:%d", m.DirectoryFid, m.Name, m.Perm, m.Major, m.Minor, m.Gid)
 }
 
 // Len returns the length of the message in bytes.
@@ -274,7 +274,7 @@ func (m *Tmknod) Reset() { *m = Tmknod{} }
 func (m Tmknod) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.DirectoryFid)
 	buf.PutString(m.Name)
-	buf.PutUint32(m.Permission)
+	buf.PutUint32(uint32(m.Perm))
 	buf.PutUint32(m.Major)
 	buf.PutUint32(m.Minor)
 	buf.PutUint32(m.Gid)
@@ -284,7 +284,7 @@ func (m Tmknod) Encode(buf *binary.Buffer) {
 func (m *Tmknod) Decode(buf *binary.Buffer) {
 	m.DirectoryFid = buf.Uint32()
 	m.Name = buf.String()
-	m.Permission = buf.Uint32()
+	m.Perm = Mode(buf.Uint32())
 	m.Major = buf.Uint32()
 	m.Minor = buf.Uint32()
 	m.Gid = buf.Uint32()
@@ -391,7 +391,7 @@ func (m *Tgetattr) Decode(buf *binary.Buffer) {
 
 // String implements fmt.Stringer.
 func (m Rgetattr) String() string {
-	return fmt.Sprintf("valid:%d %s mode:%d uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d", m.Valid, m.Qid, m.Mode, m.Uid, m.Gid, m.Nlink, m.Rdev, m.Size, m.BlockSize, m.Blocks, m.Atime.Nano(), m.Mtime.Nano(), m.Ctime.Nano(), m.Btime.Nano(), m.Gen, m.DataVersion)
+	return fmt.Sprintf("valid:%d %s mode:%q uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d", m.Valid, m.Qid, m.Mode, m.Uid, m.Gid, m.Nlink, m.Rdev, m.Size, m.BlockSize, m.Blocks, m.Atime.Nano(), m.Mtime.Nano(), m.Ctime.Nano(), m.Btime.Nano(), m.Gen, m.DataVersion)
 }
 
 // Len returns the length of the message in bytes.
@@ -404,7 +404,7 @@ func (m *Rgetattr) Reset() { *m = Rgetattr{} }
 func (m Rgetattr) Encode(buf *binary.Buffer) {
 	buf.PutUint64(m.Valid)
 	m.Qid.Encode(buf)
-	buf.PutUint32(m.Mode)
+	buf.PutUint32(uint32(m.Mode))
 	buf.PutUint32(m.Uid)
 	buf.PutUint32(m.Gid)
 	buf.PutUint64(m.Nlink)
@@ -424,7 +424,7 @@ func (m Rgetattr) Encode(buf *binary.Buffer) {
 func (m *Rgetattr) Decode(buf *binary.Buffer) {
 	m.Valid = buf.Uint64()
 	m.Qid.Decode(buf)
-	m.Mode = buf.Uint32()
+	m.Mode = Mode(buf.Uint32())
 	m.Uid = buf.Uint32()
 	m.Gid = buf.Uint32()
 	m.Nlink = buf.Uint64()
@@ -442,7 +442,7 @@ func (m *Rgetattr) Decode(buf *binary.Buffer) {
 
 // String implements fmt.Stringer.
 func (m Tsetattr) String() string {
-	return fmt.Sprintf("fid:%d valid:%d mode:%d uid:%d gid:%d size:%d atime:%d mtime:%d", m.Fid, m.Valid, m.Mode, m.Uid, m.Gid, m.Size, m.Atime.Nano(), m.Mtime.Nano())
+	return fmt.Sprintf("fid:%d valid:%d mode:%q uid:%d gid:%d size:%d atime:%d mtime:%d", m.Fid, m.Valid, m.Mode, m.Uid, m.Gid, m.Size, m.Atime.Nano(), m.Mtime.Nano())
 }
 
 // Len returns the length of the message in bytes.
@@ -455,7 +455,7 @@ func (m *Tsetattr) Reset() { *m = Tsetattr{} }
 func (m Tsetattr) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.Fid)
 	buf.PutUint32(m.Valid)
-	buf.PutUint32(m.Mode)
+	buf.PutUint32(uint32(m.Mode))
 	buf.PutUint32(m.Uid)
 	buf.PutUint32(m.Gid)
 	buf.PutUint64(m.Size)
@@ -467,7 +467,7 @@ func (m Tsetattr) Encode(buf *binary.Buffer) {
 func (m *Tsetattr) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 	m.Valid = buf.Uint32()
-	m.Mode = buf.Uint32()
+	m.Mode = Mode(buf.Uint32())
 	m.Uid = buf.Uint32()
 	m.Gid = buf.Uint32()
 	m.Size = buf.Uint64()
@@ -789,7 +789,7 @@ func (m *Rlink) Decode(buf *binary.Buffer) {}
 
 // String implements fmt.Stringer.
 func (m Tmkdir) String() string {
-	return fmt.Sprintf("directory_fid:%d name:%q permission:%d gid:%d", m.DirectoryFid, m.Name, m.Permission, m.Gid)
+	return fmt.Sprintf("directory_fid:%d name:%q perm:%q gid:%d", m.DirectoryFid, m.Name, m.Perm, m.Gid)
 }
 
 // Len returns the length of the message in bytes.
@@ -802,7 +802,7 @@ func (m *Tmkdir) Reset() { *m = Tmkdir{} }
 func (m Tmkdir) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.DirectoryFid)
 	buf.PutString(m.Name)
-	buf.PutUint32(m.Permission)
+	buf.PutUint32(uint32(m.Perm))
 	buf.PutUint32(m.Gid)
 }
 
@@ -810,7 +810,7 @@ func (m Tmkdir) Encode(buf *binary.Buffer) {
 func (m *Tmkdir) Decode(buf *binary.Buffer) {
 	m.DirectoryFid = buf.Uint32()
 	m.Name = buf.String()
-	m.Permission = buf.Uint32()
+	m.Perm = Mode(buf.Uint32())
 	m.Gid = buf.Uint32()
 }
 
@@ -871,14 +871,14 @@ func (m *Tunlinkat) Reset() { *m = Tunlinkat{} }
 func (m Tunlinkat) Encode(buf *binary.Buffer) {
 	buf.PutUint32(m.DirectoryFid)
 	buf.PutString(m.Name)
-	buf.PutUint32(m.Flags)
+	buf.PutUint32(uint32(m.Flags))
 }
 
 // Decode decodes from the given binary.Buffer.
 func (m *Tunlinkat) Decode(buf *binary.Buffer) {
 	m.DirectoryFid = buf.Uint32()
 	m.Name = buf.String()
-	m.Flags = buf.Uint32()
+	m.Flags = Flag(buf.Uint32())
 }
 
 // String implements fmt.Stringer.

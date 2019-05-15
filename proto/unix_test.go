@@ -7,7 +7,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func TestConvertFileMode(t *testing.T) {
+func TestConvertMode(t *testing.T) {
 	for i, mode := range []os.FileMode{
 		os.ModeDevice | os.ModeCharDevice | 0644,
 		os.ModeDir | 0755,
@@ -29,7 +29,7 @@ func TestConvertFileMode(t *testing.T) {
 		os.ModeSymlink,
 		0, /* os.ModeRegular */
 	} {
-		m := NewFileMode(mode)
+		m := NewMode(mode)
 
 		if mode != m.FileMode() {
 			t.Fatalf("mode converter (#%.4d): expected file mode %d, got %d", i, mode, m.FileMode())
@@ -46,10 +46,10 @@ func TestConvertFileMode(t *testing.T) {
 	}
 }
 
-func TestConvertFileModePosix(t *testing.T) {
+func TestConvertFileModeUnix(t *testing.T) {
 	for i, test := range []struct {
 		mode uint32
-		want FileMode
+		want Mode
 	}{
 		{unix.S_IFDIR | unix.S_ISGID | 0755, ModeDirectory | ModeGroupID | 0755},
 		{unix.S_IFDIR | unix.S_ISUID | 0755, ModeDirectory | ModeUserID | 0755},
@@ -71,7 +71,7 @@ func TestConvertFileModePosix(t *testing.T) {
 		{unix.S_IFLNK, ModeSymlink},
 		{unix.S_IFREG, ModeRegular},
 	} {
-		m := NewFileModeUnix(test.mode)
+		m := NewModeUnix(test.mode)
 		if m != test.want {
 			t.Fatalf("mode converter (#%.4d): expected file mode %d, got %d", i, test.want, m)
 		}

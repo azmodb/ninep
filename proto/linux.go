@@ -96,7 +96,7 @@ type Rstatfs struct {
 // bits, e.g. O_RDONLY, O_RDWR, O_WRONLY.
 type Tlopen struct {
 	Fid   uint32
-	Flags uint32
+	Flags Flag
 }
 
 // Rlopen message contains a server's reply to a Tlopen request.
@@ -111,11 +111,11 @@ type Rlopen struct {
 // creat(2) mode bits. Flags contains Linux open(2) flags bits, e.g.
 // O_RDONLY, O_RDWR, O_WRONLY.
 type Tlcreate struct {
-	Fid        uint32
-	Name       string
-	Flags      uint32
-	Permission uint32
-	Gid        uint32
+	Fid   uint32
+	Name  string
+	Flags Flag
+	Perm  Mode
+	Gid   uint32
 }
 
 // Rlcreate message contains a server's reply to a Tlcreate request. The
@@ -143,7 +143,7 @@ type Rsymlink = Qid
 type Tmknod struct {
 	DirectoryFid uint32
 	Name         string
-	Permission   uint32
+	Perm         Mode
 	Major        uint32
 	Minor        uint32
 	Gid          uint32
@@ -218,7 +218,7 @@ type Rgetattr struct {
 
 	Qid // 13 byte value representing a unique file system object
 
-	Mode      uint32 // inode protection mode
+	Mode      Mode   // inode protection mode
 	Uid       uint32 // user-id of owner
 	Gid       uint32 // group-id of owner
 	Nlink     uint64 // number of hard links to the file
@@ -244,7 +244,7 @@ type Tsetattr struct {
 	// Valid is a bitmask selecting which fields to set.
 	Valid uint32
 
-	Mode uint32 // inode protection mode
+	Mode Mode   // inode protection mode
 	Uid  uint32 // user-id of owner
 	Gid  uint32 // group-id of owner
 	Size uint64 // file size as handled by Linux truncate(2)
@@ -420,7 +420,7 @@ type Rlink struct{}
 type Tmkdir struct {
 	DirectoryFid uint32
 	Name         string
-	Permission   uint32
+	Perm         Mode
 	Gid          uint32
 }
 
@@ -451,7 +451,7 @@ type Rrenameat struct{}
 type Tunlinkat struct {
 	DirectoryFid uint32
 	Name         string
-	Flags        uint32
+	Flags        Flag
 }
 
 // Runlinkat message contains a server's reply to a Tunlinkat message.

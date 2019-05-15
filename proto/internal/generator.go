@@ -136,7 +136,7 @@ func (g *Generator) genStructLen(s Struct) {
 			g.printf("2 + len(m.%s)", field.Name)
 		case "uint64":
 			g.printf("8")
-		case "uint32":
+		case "uint32", "Mode", "Flag":
 			g.printf("4")
 		case "uint16":
 			g.printf("2")
@@ -173,6 +173,10 @@ func (g *Generator) genStructDecode(s Struct) {
 			g.print("m.%s = buf.Uint16()", field.Name)
 		case "uint8":
 			g.print("m.%s = buf.Uint8()", field.Name)
+		case "Mode":
+			g.print("m.%s = Mode(buf.Uint32())", field.Name)
+		case "Flag":
+			g.print("m.%s = Flag(buf.Uint32())", field.Name)
 		case "MessageType":
 			g.print("m.%s = MessageType(buf.Uint8())", field.Name)
 		case "Qid":
@@ -203,6 +207,10 @@ func (g *Generator) genStructEncode(s Struct) {
 			g.print("buf.PutUint16(m.%s)", field.Name)
 		case "uint8":
 			g.print("buf.PutUint8(m.%s)", field.Name)
+		case "Mode":
+			g.print("buf.PutUint32(uint32(m.%s))", field.Name)
+		case "Flag":
+			g.print("buf.PutUint32(uint32(m.%s))", field.Name)
 		case "MessageType":
 			g.print("buf.PutUint8(uint8(m.%s))", field.Name)
 		case "Qid":
@@ -255,10 +263,12 @@ func (g *Generator) genStructString(s Struct) {
 		switch field.Type {
 		case "string":
 			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%q")
-		case "uint64", "uint32", "uint16", "uint8":
+		case "uint64", "uint32", "uint16", "uint8", "Flag":
 			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%d")
+		case "Mode":
+			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%q")
 		case "MessageType":
-			str += fmt.Sprintf("%s:%s ", toSnake(field.Name), "%%s")
+			str += fmt.Sprintf("%s ", "%%s")
 		case "Qid":
 			str += fmt.Sprintf("%s ", "%%s")
 		case "unix.Timespec":
@@ -302,7 +312,7 @@ func (g *Generator) genStructTest(s Struct) {
 			g.printf("%s: string16.String(),", field.Name)
 		case "uint64":
 			g.printf("%s: math.MaxUint64,", field.Name)
-		case "uint32":
+		case "uint32", "Mode", "Flag":
 			g.printf("%s: math.MaxUint32,", field.Name)
 		case "uint16":
 			g.printf("%s: math.MaxUint16,", field.Name)

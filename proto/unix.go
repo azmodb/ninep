@@ -118,36 +118,36 @@ func UnixFileTypeToQidType(mode uint32) uint8 {
 	return TypeRegular
 }
 
-// FileMode are flags corresponding to file modes. These correspond to
-// bits sent over the wire and also to mode_t bits.
-type FileMode uint32
+// Mode are flags corresponding to file modes. These correspond to bits
+// sent over the wire and also to mode_t bits.
+type Mode uint32
 
 // Flags corresponding to file modes. These correspond to bits sent over
 // the wire and also correspond to mode_t bits.
 const (
-	// FileModeMask is a mask of all the file mode bits of FileMode.
-	FileModeMask FileMode = 0170000
+	// ModeMask is a mask of all the file mode bits of Mode.
+	ModeMask Mode = 0170000
 
 	// ModeRegular is a mode bit for regular files.
-	ModeRegular FileMode = 0100000
+	ModeRegular Mode = 0100000
 
 	// ModeDirectory is a mode bit for directories.
-	ModeDirectory FileMode = 040000
+	ModeDirectory Mode = 040000
 
 	// ModeSymlink is a mode bit for a symlink.
-	ModeSymlink FileMode = 0120000
+	ModeSymlink Mode = 0120000
 
 	// ModeBlockDevice is a mode bit for block devices.
-	ModeBlockDevice FileMode = 060000
+	ModeBlockDevice Mode = 060000
 
 	// ModeCharacterDevice is a mode bit for a character device.
-	ModeCharacterDevice FileMode = 020000
+	ModeCharacterDevice Mode = 020000
 
 	// ModeSocket is an mode bit for a socket.
-	ModeSocket FileMode = 0140000
+	ModeSocket Mode = 0140000
 
 	// ModeNamedPipe is a mode bit for a named pipe.
-	ModeNamedPipe FileMode = 010000
+	ModeNamedPipe Mode = 010000
 
 	// ModeGroupID has several special uses. For a directory, it
 	// indicates that BSD semantics is to be used for that directory:
@@ -155,16 +155,16 @@ const (
 	// not from the effective group ID of the creating process, and
 	// directories created there will also get the ModeGroupID bit
 	// set.
-	ModeGroupID FileMode = 0x400
-	ModeUserID  FileMode = 0x800
-	ModeSticky  FileMode = 0x200
+	ModeGroupID Mode = 0x400
+	ModeUserID  Mode = 0x800
+	ModeSticky  Mode = 0x200
 
 	ModePerm = 0777 // Unix permission bits
 )
 
-// NewFileMode returns a FileMode from an os.FileMode.
-func NewFileMode(mode os.FileMode) FileMode {
-	m := FileMode(mode & os.ModePerm)
+// NewMode returns a Mode from an os.FileMode.
+func NewMode(mode os.FileMode) Mode {
+	m := Mode(mode & os.ModePerm)
 
 	switch {
 	case mode&os.ModeCharDevice != 0:
@@ -195,9 +195,9 @@ func NewFileMode(mode os.FileMode) FileMode {
 	return m
 }
 
-// NewFileModeUnix returns a FileMode from a mode_t.
-func NewFileModeUnix(mode uint32) FileMode {
-	m := FileMode(mode & ModePerm)
+// NewModeUnix returns a FileMode from a mode_t.
+func NewModeUnix(mode uint32) Mode {
+	m := Mode(mode & ModePerm)
 
 	switch mode & unix.S_IFMT {
 	case unix.S_IFCHR:
@@ -229,10 +229,10 @@ func NewFileModeUnix(mode uint32) FileMode {
 }
 
 // FileMode converts a 9P2000.L file mode to an os.FileMode.
-func (m FileMode) FileMode() os.FileMode {
+func (m Mode) FileMode() os.FileMode {
 	mode := os.FileMode(m & 0777)
 
-	switch m & FileModeMask {
+	switch m & ModeMask {
 	case ModeCharacterDevice:
 		mode |= os.ModeDevice | os.ModeCharDevice
 	case ModeBlockDevice:
@@ -263,8 +263,8 @@ func (m FileMode) FileMode() os.FileMode {
 
 const rwx = "rwxrwxrwx"
 
-func (m FileMode) String() string {
-	mask := m & FileModeMask
+func (m Mode) String() string {
+	mask := m & ModeMask
 	buf := [32]byte{}
 	w := 0
 
