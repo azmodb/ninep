@@ -17,17 +17,6 @@ Package ninep serves network filesystems using the 9P2000.L protocol. The packag
 
 - 9P2000.L protocol [overview](https://github.com/chaos/diod/blob/master/protocol.md)
 - 9P2000 [manpages](https://9p.io/sys/man/5/INDEX.html)
-	- [intro](http://9p.io/magic/man2html/5/0intro)
-	- [attach](http://9p.io/magic/man2html/5/attach)
-	- [clunk](http://9p.io/magic/man2html/5/clunk)
-	- [error](http://9p.io/magic/man2html/5/error)
-	- [flush](http://9p.io/magic/man2html/5/flush)
-	- [open](http://9p.io/magic/man2html/5/open)
-	- [read](http://9p.io/magic/man2html/5/read)
-	- [remove](http://9p.io/magic/man2html/5/remove)
-	- [stat](http://9p.io/magic/man2html/5/stat)
-	- [version](http://9p.io/magic/man2html/5/version)
-	- [walk](http://9p.io/magic/man2html/5/walk)
 - [v9fs](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/Documentation/filesystems/9p.txt): Plan 9 Resource Sharing for Linux
 
 
