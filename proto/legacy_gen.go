@@ -10,7 +10,7 @@ import (
 )
 
 // String implements fmt.Stringer.
-func (m Header) String() string { return fmt.Sprintf("type:%s tag:%d", m.Type, m.Tag) }
+func (m Header) String() string { return fmt.Sprintf("%s tag:%d", m.Type, m.Tag) }
 
 // Len returns the length of the message in bytes.
 func (m Header) Len() int { return 1 + 2 }
