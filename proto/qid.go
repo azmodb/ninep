@@ -34,6 +34,9 @@ func (q Qid) Len() int { return 13 }
 // Reset resets all state.
 func (q *Qid) Reset() { *q = Qid{} }
 
+// IsDir reports whether q describes a directory.
+func (q Qid) IsDir() bool { return q.Type&TypeDirectory != 0 }
+
 // Encode encodes to the given binary.Buffer.
 func (q Qid) Encode(buf *binary.Buffer) {
 	buf.PutUint8(q.Type)
