@@ -285,13 +285,8 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 	}
 
 	f := &Fid{c: c, path: export, num: fidnum}
-	stat, err := f.stat(proto.GetAttrBasic)
-	if err != nil {
-		return nil, err
-	}
-	f.uid, f.gid = stat.Uid, stat.Gid
-
-	return f, nil
+	_, err := f.stat(proto.GetAttrBasic) // initialize fid
+	return f, err
 }
 
 type pool struct {

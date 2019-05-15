@@ -47,10 +47,10 @@ const separator = "/"
 type Fid struct {
 	c   *Client
 	num uint32
-	uid uint32
 	gid uint32
 
 	mu      sync.Mutex // protects following
+	qid     proto.Qid
 	iounit  uint32
 	path    string
 	opened  bool
@@ -82,6 +82,8 @@ func (f *Fid) stat(mask uint64) (*proto.Rgetattr, error) {
 	if err := f.c.rpc(proto.MessageTgetattr, tx, rx); err != nil {
 		return nil, err
 	}
+	f.qid = rx.Qid
+	f.gid = rx.Gid
 	return rx, nil
 }
 
@@ -91,10 +93,6 @@ func (f *Fid) stat(mask uint64) (*proto.Rgetattr, error) {
 func (f *Fid) Stat() (os.FileInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-
-	// if !f.opened {
-	// 	return nil, errFidNotOpened
-	// }
 
 	rx, err := f.stat(proto.GetAttrBasic)
 	if err != nil {
@@ -130,6 +128,7 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 	}
 
 	f.iounit = rx.Iounit
+	f.qid = rx.Qid
 	f.opened = true
 	return nil
 }
@@ -172,6 +171,7 @@ func (f *Fid) Open(flag int) error {
 	}
 
 	f.iounit = rx.Iounit
+	f.qid = rx.Qid
 	f.opened = true
 	return nil
 }
@@ -215,8 +215,14 @@ func (f *Fid) walk(names []string) (*Fid, error) {
 	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
 		return nil, err
 	}
+	if len(*rx) == 0 {
+		return f, nil
+	}
 
-	return nil, nil
+	path := path.Join(f.path, path.Join(names...))
+	n := &Fid{c: f.c, path: path, num: newFid}
+	_, err := n.stat(proto.GetAttrBasic) // initialize new fid
+	return n, err
 }
 
 func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {

@@ -84,6 +84,38 @@ func TestCompatCreateRemove(t *testing.T) {
 	}
 }
 
+func attach(t *testing.T, c *Client, path string) *Fid {
+	f, err := c.Attach(nil, path, "root", math.MaxUint32)
+	if err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	return f
+}
+
+func TestBasicWalk(t *testing.T) {
+	t.Parallel()
+
+	c := newCompatTestClient(t)
+	defer c.Close()
+
+	names := []string{"dir1", "sub1", "subsub1", "file1"}
+	f := attach(t, c, "/tmp/dir-test")
+	defer f.Close()
+
+	n, err := f.Walk(names...)
+	if err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+
+	fi, err := n.Stat()
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if fi.Name() != names[len(names)-1] {
+		t.Fatalf("walk: expected file name %q, got %q", fi.Name(), names[len(names)-1])
+	}
+}
+
 // func TestCompatMkdirRemove(t *testing.T) {
 // 	t.Parallel()
 
