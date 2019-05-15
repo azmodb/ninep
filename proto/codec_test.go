@@ -266,3 +266,27 @@ func TestErrDecoder(t *testing.T) {
 		t.Errorf("decoder: expected decode error, got %v", err)
 	}
 }
+
+func TestNilMessageDecode(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	enc := NewEncoder(buf, 0)
+	dec := NewDecoder(buf, 0)
+
+	h := Header{Type: MessageTversion, Tag: 42}
+	m := Tversion{MessageSize: 8192, Version: Version}
+
+	if err := enc.Encode(&h, &m); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+
+	if err := dec.DecodeHeader(nil); err != nil {
+		t.Fatalf("decode header: %v", err)
+	}
+	if err := dec.Decode(nil); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Fatalf("decode nil message: expected empty buffer")
+	}
+}
