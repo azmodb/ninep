@@ -4,8 +4,8 @@ package ninep
 
 import (
 	"context"
+	"fmt"
 	"math"
-	"os"
 	"testing"
 )
 
@@ -15,6 +15,25 @@ const diodTestServerAddr = "127.0.0.1:5640"
 
 const diodMaxMessageSize = 64 * 1024
 
+func newCompatTestClient(t *testing.T) *Client {
+	t.Helper()
+
+	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
+	if err != nil {
+		t.Fatalf("cannot dial diod test-server: %v", err)
+	}
+	return c
+}
+
+func attach(t *testing.T, c *Client, path string) *Fid {
+	f, err := c.Attach(nil, path, "root", math.MaxUint32)
+	if err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	return f
+}
+
+/*
 func TestCompatHandshake(t *testing.T) {
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
 	if err != nil {
@@ -36,17 +55,7 @@ func TestCompatHandshake(t *testing.T) {
 	}
 }
 
-func newCompatTestClient(t *testing.T) *Client {
-	t.Helper()
-
-	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
-	if err != nil {
-		t.Fatalf("cannot dial diod test-server: %v", err)
-	}
-	return c
-}
-
-func TestCompatAttach(t *testing.T) {
+func TestAttach(t *testing.T) {
 	t.Parallel()
 
 	c := newCompatTestClient(t)
@@ -54,16 +63,16 @@ func TestCompatAttach(t *testing.T) {
 
 	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
 	if err != nil {
-		t.Fatalf("compat attach: %v", err)
+		t.Fatalf("attach: %v", err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			t.Fatalf("compat clunk: %v", err)
+			t.Fatalf("clunk: %v", err)
 		}
 	}()
 }
 
-func TestCompatCreateRemove(t *testing.T) {
+func TestCreateRemove(t *testing.T) {
 	t.Parallel()
 
 	c := newCompatTestClient(t)
@@ -71,48 +80,53 @@ func TestCompatCreateRemove(t *testing.T) {
 
 	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
 	if err != nil {
-		t.Fatalf("compat attach: %v", err)
+		t.Fatalf("attach: %v", err)
 	}
 	defer f.Close()
 
 	if err = f.Create("create_remove_test", os.O_RDONLY, 0644); err != nil {
-		t.Fatalf("compat create: %v", err)
+		t.Fatalf("create: %v", err)
 	}
 
 	if err = f.Remove(); err != nil {
-		t.Fatalf("compat remove: %v", err)
+		t.Fatalf("remove: %v", err)
 	}
 }
+*/
 
-func attach(t *testing.T, c *Client, path string) *Fid {
-	f, err := c.Attach(nil, path, "root", math.MaxUint32)
-	if err != nil {
-		t.Fatalf("attach: %v", err)
-	}
-	return f
-}
-
-func TestBasicWalk(t *testing.T) {
+func TestWalk(t *testing.T) {
 	t.Parallel()
 
 	c := newCompatTestClient(t)
 	defer c.Close()
 
-	names := []string{"dir1", "sub1", "subsub1", "file1"}
+	//names := []string{"dir1", "sub1", "subsub1", "file1"}
+	names := []string{"dir1"}
 	f := attach(t, c, "/tmp/dir-test")
 	defer f.Close()
 
-	n, err := f.Walk(names...)
+	dir1, err := f.Walk(names...)
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
+	defer dir1.Close()
 
-	fi, err := n.Stat()
+	sub1, err := dir1.Walk("sub1")
+	if err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+	defer sub1.Close()
+
+	//	if err = dir1.Open(os.O_RDONLY); err != nil {
+	//		t.Fatalf("open: %v", err)
+	//	}
+
+	entries, err := dir1.ReadDir(-1)
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
-	if fi.Name() != names[len(names)-1] {
-		t.Fatalf("walk: expected file name %q, got %q", fi.Name(), names[len(names)-1])
+	for _, ent := range entries {
+		fmt.Println("\t", ent.Name())
 	}
 }
 

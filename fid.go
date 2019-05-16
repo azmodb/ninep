@@ -14,23 +14,20 @@ import (
 // fileInfo describes a file, implements os.FileInfo and is returned by
 // Stat (Tgetattr).
 type fileInfo struct {
-	rx   *proto.Rgetattr
-	name string
+	*proto.Rgetattr
+	path   string
+	iounit uint32
 }
 
-func (fi fileInfo) Name() string { return fi.name }
-func (fi fileInfo) Size() int64  { return int64(fi.rx.Size) }
-
-func (fi fileInfo) Mode() os.FileMode {
-	return fi.rx.Mode.FileMode()
-}
+func (fi fileInfo) Mode() os.FileMode { return fi.Rgetattr.Mode.FileMode() }
+func (fi fileInfo) Name() string      { return path.Base(fi.path) }
+func (fi fileInfo) Size() int64       { return int64(fi.Rgetattr.Size) }
+func (fi fileInfo) Sys() interface{}  { return fi.Rgetattr }
+func (fi fileInfo) Iounit() uint32    { return fi.iounit }
 
 func (fi fileInfo) ModTime() time.Time {
-	return time.Unix(fi.rx.Mtime.Sec, fi.rx.Mtime.Nsec)
+	return time.Unix(fi.Mtime.Sec, fi.Mtime.Nsec)
 }
-
-func (fi fileInfo) IsDir() bool      { return fi.rx.IsDir() }
-func (fi fileInfo) Sys() interface{} { return fi.rx }
 
 var (
 	errInvalildName = errors.New("invalid file or directory name")
@@ -47,12 +44,9 @@ const separator = "/"
 type Fid struct {
 	c   *Client
 	num uint32
-	gid uint32
 
 	mu      sync.Mutex // protects following
-	qid     proto.Qid
-	iounit  uint32
-	path    string
+	fi      *fileInfo
 	opened  bool
 	closing bool
 }
@@ -64,8 +58,12 @@ func (f *Fid) Num() uint32 { return f.num }
 // fid is no longer needed by the client.
 func (f *Fid) Close() error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
+	err := f.clunk()
+	f.mu.Unlock()
+	return err
+}
 
+func (f *Fid) clunk() error {
 	if f.closing {
 		return errFidNotOpened
 	}
@@ -76,15 +74,11 @@ func (f *Fid) Close() error {
 	return f.c.rpc(proto.MessageTclunk, tx, rx)
 }
 
-func (f *Fid) stat(mask uint64) (*proto.Rgetattr, error) {
-	tx := &proto.Tgetattr{Fid: f.num, RequestMask: mask}
+func stat(c *Client, num uint32, mask uint64) (*proto.Rgetattr, error) {
+	tx := &proto.Tgetattr{Fid: num, RequestMask: mask}
 	rx := &proto.Rgetattr{}
-	if err := f.c.rpc(proto.MessageTgetattr, tx, rx); err != nil {
-		return nil, err
-	}
-	f.qid = rx.Qid
-	f.gid = rx.Gid
-	return rx, nil
+	err := c.rpc(proto.MessageTgetattr, tx, rx)
+	return rx, err
 }
 
 // Stat returns information about a file represented by fid. Execute
@@ -94,11 +88,142 @@ func (f *Fid) Stat() (os.FileInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	rx, err := f.stat(proto.GetAttrBasic)
+	attr, err := stat(f.c, f.num, proto.GetAttrBasic)
 	if err != nil {
 		return nil, err
 	}
-	return fileInfo{name: path.Base(f.path), rx: rx}, nil
+	f.fi.Rgetattr = attr.Copy()
+
+	return fileInfo{
+		iounit:   f.fi.iounit,
+		path:     f.fi.path,
+		Rgetattr: attr,
+	}, nil
+}
+
+func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
+	if len(names) > proto.MaxNames {
+		return 0, nil, unix.EINVAL
+	}
+
+	newFid, ok := f.c.fid.Get()
+	if !ok {
+		return 0, nil, errFidOverflow
+	}
+
+	tx := &proto.Twalk{Fid: f.num, NewFid: newFid, Names: names}
+	rx := &proto.Rwalk{}
+	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
+		return 0, nil, err
+	}
+	if len(*rx) != len(names) {
+		return 0, nil, unix.ENOENT
+	}
+
+	attr, err := stat(f.c, newFid, proto.GetAttrBasic)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	path := path.Join(f.fi.path, path.Join(names...))
+	return newFid, &fileInfo{path: path, Rgetattr: attr}, nil
+}
+
+func (f *Fid) Walk(names ...string) (*Fid, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	fidnum, fi, err := f.walk(names...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Fid{c: f.c, num: fidnum, fi: fi}, nil
+}
+
+func (f *Fid) clone() (*Fid, error) {
+	fidnum, fi, err := f.walk()
+	if err != nil {
+		return nil, err
+	}
+	return &Fid{c: f.c, num: fidnum, fi: fi}, nil
+}
+
+func (f *Fid) parse(data []byte) ([]proto.Dirent, uint64, error) {
+	var ents []proto.Dirent
+	var offset uint64
+	var err error
+
+	for len(data) > 0 {
+		dirent := proto.Dirent{}
+		if data, err = dirent.Unmarshal(data); err != nil {
+			return ents, offset, err
+		}
+		if isReserved(dirent.Name) {
+			continue
+		}
+
+		ents = append(ents, dirent)
+		offset = dirent.Offset
+	}
+	return ents, offset, err
+}
+
+func (f *Fid) readDir(n int) (ents []proto.Dirent, err error) {
+	tx := &proto.Treaddir{Fid: f.num, Offset: 0, Count: f.c.maxDataSize}
+	rx := &proto.Rreaddir{}
+
+	for {
+		rx.Reset()
+		if err = f.c.rpc(proto.MessageTreaddir, tx, rx); err != nil {
+			if err == unix.EIO {
+				break
+			}
+			return nil, err
+		}
+		if len(rx.Data) < proto.FixedDirentSize {
+			break
+		}
+
+		entries, offset, err := f.parse(rx.Data)
+		if err != nil {
+			return nil, err
+		}
+		tx.Offset = offset
+		ents = append(ents, entries...)
+	}
+	return ents, nil
+}
+
+func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
+	var fi []os.FileInfo
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	clone, err := f.clone()
+	if err != nil {
+		return nil, err
+	}
+	defer clone.clunk()
+
+	if err = clone.open(os.O_RDONLY); err != nil {
+		return nil, err
+	}
+
+	ents, err := clone.readDir(n)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dirent := range ents {
+		_, stat, err := f.walk(dirent.Name)
+		if err != nil {
+			return nil, err
+		}
+		fi = append(fi, stat)
+	}
+	return fi, err
 }
 
 // Create asks the file server to create a new file with the name
@@ -120,15 +245,14 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 		Name:  name,
 		Flags: proto.NewFlag(flag),
 		Perm:  proto.NewMode(perm),
-		Gid:   f.gid,
+		Gid:   f.fi.Gid,
 	}
 	rx := &proto.Rlcreate{}
 	if err := f.c.rpc(proto.MessageTlcreate, tx, rx); err != nil {
 		return err
 	}
 
-	f.iounit = rx.Iounit
-	f.qid = rx.Qid
+	f.fi.iounit = rx.Iounit
 	f.opened = true
 	return nil
 }
@@ -148,7 +272,7 @@ func (f *Fid) Mkdir(name string, perm os.FileMode) error {
 		DirectoryFid: f.num,
 		Name:         name,
 		Perm:         proto.NewMode(perm),
-		Gid:          f.gid,
+		Gid:          f.fi.Gid,
 	}
 	rx := &proto.Rmkdir{}
 	return f.c.rpc(proto.MessageTmkdir, tx, rx)
@@ -158,8 +282,12 @@ func (f *Fid) Mkdir(name string, perm os.FileMode) error {
 // (os.O_RDONLY etc.). If successful, it can be used for I/O.
 func (f *Fid) Open(flag int) error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
+	err := f.open(flag)
+	f.mu.Unlock()
+	return err
+}
 
+func (f *Fid) open(flag int) error {
 	if f.opened {
 		return errFidOpened
 	}
@@ -170,8 +298,7 @@ func (f *Fid) Open(flag int) error {
 		return err
 	}
 
-	f.iounit = rx.Iounit
-	f.qid = rx.Qid
+	f.fi.iounit = rx.Iounit
 	f.opened = true
 	return nil
 }
@@ -197,44 +324,12 @@ func (f *Fid) Remove() error {
 	return f.c.rpc(proto.MessageTremove, tx, rx)
 }
 
-func (f *Fid) Walk(names ...string) (*Fid, error) {
-	f.mu.Lock()
-	fid, err := f.walk(names)
-	f.mu.Unlock()
-	return fid, err
-}
-
-func (f *Fid) walk(names []string) (*Fid, error) {
-	newFid, ok := f.c.fid.Get()
-	if !ok {
-		return nil, errFidOverflow
-	}
-
-	tx := &proto.Twalk{Fid: f.num, NewFid: newFid, Names: names}
-	rx := &proto.Rwalk{}
-	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
-		return nil, err
-	}
-	if len(*rx) == 0 {
-		return f, nil
-	}
-
-	path := path.Join(f.path, path.Join(names...))
-	n := &Fid{c: f.c, path: path, num: newFid}
-	_, err := n.stat(proto.GetAttrBasic) // initialize new fid
-	return n, err
-}
-
 func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
 	return 0, unix.ENOTSUP
 }
 
 func (f *Fid) WriteAt(p []byte, offset int64) (int, error) {
 	return 0, unix.ENOTSUP
-}
-
-func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
-	return nil, unix.ENOTSUP
 }
 
 func (f *Fid) Link(oldname, newname string) error {

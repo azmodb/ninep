@@ -285,9 +285,14 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		return nil, err
 	}
 
-	f := &Fid{c: c, path: export, num: fidnum}
-	_, err := f.stat(proto.GetAttrBasic) // initialize fid
-	return f, err
+	attr, err := stat(c, fidnum, proto.GetAttrBasic)
+	if err != nil {
+		return nil, err
+	}
+
+	fid := &Fid{c: c, num: fidnum, fi: &fileInfo{path: export}}
+	fid.fi.Rgetattr = attr
+	return fid, nil
 }
 
 type pool struct {
