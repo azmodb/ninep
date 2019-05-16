@@ -9,6 +9,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// FixedDirentSize is the length of all fixed-width fields in a Dirent.
+const FixedDirentSize = 24
+
 // Dirent structure defines the format of 9P2000.L directory entries.
 type Dirent struct {
 	Qid
@@ -23,7 +26,7 @@ func (m Dirent) String() string {
 }
 
 // Len returns the length of the message in bytes.
-func (m Dirent) Len() int { return 13 + 8 + 1 + 2 + len(m.Name) }
+func (m Dirent) Len() int { return FixedDirentSize + len(m.Name) }
 
 // Reset resets all state.
 func (m *Dirent) Reset() { *m = Dirent{} }
@@ -57,7 +60,7 @@ func (m Dirent) Marshal(data []byte) ([]byte, int, error) {
 
 // Unmarshal implements binary.Unmarshaler.
 func (m *Dirent) Unmarshal(data []byte) ([]byte, error) {
-	if len(data) < 24 {
+	if len(data) < FixedDirentSize {
 		return data, io.ErrUnexpectedEOF
 	}
 	m.Qid = Qid{
@@ -68,7 +71,7 @@ func (m *Dirent) Unmarshal(data []byte) ([]byte, error) {
 	m.Offset = binary.Uint64(data[13:21])
 	m.Type = binary.Uint8(data[21:22])
 	m.Name = binary.String(data[22:])
-	return data, nil
+	return data[m.Len():], nil
 }
 
 // Stat describes a file system object.
