@@ -196,11 +196,12 @@ func (c *Client) recv() (err error) {
 			} else {
 				f.Done(unix.Errno(rlerror.Errno))
 			}
+			log.Debugf("-> %s %s", header, rlerror)
 		default:
 			err = c.dec.Decode(f.rx)
 			f.Done(err)
+			log.Debugf("-> %s %s", header, f.rx)
 		}
-		log.Debugf("-> %s %s", header, f.rx)
 	}
 
 	c.writer.Lock()
