@@ -1,5 +1,5 @@
 // Package fs provides the definitions and functions for interacting with
-// the filesystem.
+// the filesystem, as an abstraction layer.
 package fs
 
 import (
