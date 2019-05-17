@@ -292,6 +292,7 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 
 	fid := &Fid{c: c, num: fidnum, fi: &fileInfo{path: export}}
 	fid.fi.Rgetattr = attr
+	fid.fi.iounit = 0
 	return fid, nil
 }
 

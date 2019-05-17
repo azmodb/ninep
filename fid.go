@@ -70,6 +70,7 @@ func (f *Fid) clunk() error {
 
 	f.opened = false
 	f.closing = true
+
 	tx, rx := &proto.Tclunk{Fid: f.num}, &proto.Rclunk{}
 	return f.c.rpc(proto.MessageTclunk, tx, rx)
 }
@@ -86,19 +87,16 @@ func stat(c *Client, num uint32, mask uint64) (*proto.Rgetattr, error) {
 // that lead to the file.
 func (f *Fid) Stat() (os.FileInfo, error) {
 	f.mu.Lock()
-	defer f.mu.Unlock()
-
 	attr, err := stat(f.c, f.num, proto.GetAttrBasic)
 	if err != nil {
+		f.mu.Unlock()
 		return nil, err
 	}
 	f.fi.Rgetattr = attr.Copy()
 
-	return fileInfo{
-		iounit:   f.fi.iounit,
-		path:     f.fi.path,
-		Rgetattr: attr,
-	}, nil
+	fi := fileInfo{Rgetattr: attr, path: f.fi.path, iounit: f.fi.iounit}
+	f.mu.Unlock()
+	return fi, nil
 }
 
 func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
@@ -106,12 +104,12 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, unix.EINVAL
 	}
 
-	newFid, ok := f.c.fid.Get()
+	fidnum, ok := f.c.fid.Get()
 	if !ok {
 		return 0, nil, errFidOverflow
 	}
 
-	tx := &proto.Twalk{Fid: f.num, NewFid: newFid, Names: names}
+	tx := &proto.Twalk{Fid: f.num, NewFid: fidnum, Names: names}
 	rx := &proto.Rwalk{}
 	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
 		return 0, nil, err
@@ -120,25 +118,26 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, unix.ENOENT
 	}
 
-	attr, err := stat(f.c, newFid, proto.GetAttrBasic)
+	attr, err := stat(f.c, fidnum, proto.GetAttrBasic)
 	if err != nil {
 		return 0, nil, err
 	}
 
 	path := path.Join(f.fi.path, path.Join(names...))
-	return newFid, &fileInfo{path: path, Rgetattr: attr}, nil
+	return fidnum, &fileInfo{Rgetattr: attr, path: path}, nil
 }
 
 func (f *Fid) Walk(names ...string) (*Fid, error) {
 	f.mu.Lock()
-	defer f.mu.Unlock()
-
 	fidnum, fi, err := f.walk(names...)
 	if err != nil {
+		f.mu.Unlock()
 		return nil, err
 	}
 
-	return &Fid{c: f.c, num: fidnum, fi: fi}, nil
+	fid := &Fid{c: f.c, num: fidnum, fi: fi}
+	f.mu.Unlock()
+	return fid, nil
 }
 
 func (f *Fid) clone() (*Fid, error) {
@@ -169,7 +168,7 @@ func (f *Fid) parse(data []byte) ([]proto.Dirent, uint64, error) {
 	return ents, offset, err
 }
 
-func (f *Fid) readDir(n int) (ents []proto.Dirent, err error) {
+func (f *Fid) readDirent(n int) (ents []proto.Dirent, err error) {
 	tx := &proto.Treaddir{Fid: f.num, Offset: 0, Count: f.c.maxDataSize}
 	rx := &proto.Rreaddir{}
 
@@ -195,12 +194,7 @@ func (f *Fid) readDir(n int) (ents []proto.Dirent, err error) {
 	return ents, nil
 }
 
-func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
-	var fi []os.FileInfo
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
+func (f *Fid) readDir(n int) (info []os.FileInfo, err error) {
 	clone, err := f.clone()
 	if err != nil {
 		return nil, err
@@ -211,19 +205,26 @@ func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
 		return nil, err
 	}
 
-	ents, err := clone.readDir(n)
+	ents, err := clone.readDirent(n)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, dirent := range ents {
-		_, stat, err := f.walk(dirent.Name)
+		_, fi, err := f.walk(dirent.Name)
 		if err != nil {
 			return nil, err
 		}
-		fi = append(fi, stat)
+		info = append(info, fi)
 	}
-	return fi, err
+	return info, err
+}
+
+func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
+	f.mu.Lock()
+	info, err := f.readDir(n)
+	f.mu.Unlock()
+	return info, err
 }
 
 // Create asks the file server to create a new file with the name
@@ -238,8 +239,12 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 	}
 
 	f.mu.Lock()
-	defer f.mu.Unlock()
+	err := f.create(name, flag, perm)
+	f.mu.Unlock()
+	return err
+}
 
+func (f *Fid) create(name string, flag int, perm os.FileMode) error {
 	tx := &proto.Tlcreate{
 		Fid:   f.num,
 		Name:  name,
@@ -261,12 +266,16 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 // supplied, in the directory represented by fid, and requires write
 // permission in the directory.
 func (f *Fid) Mkdir(name string, perm os.FileMode) error {
+	f.mu.Lock()
+	err := f.mkdir(name, perm)
+	f.mu.Unlock()
+	return err
+}
+
+func (f *Fid) mkdir(name string, perm os.FileMode) error {
 	if isReserved(name) {
 		return errInvalildName
 	}
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
 
 	tx := &proto.Tmkdir{
 		DirectoryFid: f.num,
@@ -312,8 +321,12 @@ func (f *Fid) open(flag int) error {
 // of removing the file if permissions allow.
 func (f *Fid) Remove() error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
+	err := f.remove()
+	f.mu.Unlock()
+	return err
+}
 
+func (f *Fid) remove() error {
 	if !f.opened {
 		return errFidNotOpened
 	}
