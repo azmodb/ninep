@@ -74,12 +74,6 @@ func (m *Dirent) Unmarshal(data []byte) ([]byte, error) {
 	return data[m.Len():], nil
 }
 
-// Stat describes a file system object.
-type Stat = unix.Stat_t
-
-// StatFS describes a file system.
-type StatFS = unix.Statfs_t
-
 func encodeTimespec(buf *binary.Buffer, t unix.Timespec) {
 	sec, nsec := t.Unix()
 	buf.PutUint64(uint64(sec))
