@@ -14,7 +14,7 @@ const direntBlockSize = 4 * 1024
 
 // readDirent reads directory entries from the given file descriptor. The
 // order of the directory entries is not specified.
-func readDirent(fd int) (entries []*proto.Dirent, err error) {
+func readDirent(fd int) (entries []proto.Dirent, err error) {
 	buf := make([]byte, direntBlockSize)
 	pos, size, offset := 0, 0, uint64(1)
 
@@ -40,8 +40,8 @@ func readDirent(fd int) (entries []*proto.Dirent, err error) {
 
 // parse parses directory entries in buf. It returns the number of bytes
 // consumed from buf and the current offset.
-func parse(buf []byte, offset uint64) ([]*proto.Dirent, int, uint64) {
-	var entries []*proto.Dirent
+func parse(buf []byte, offset uint64) ([]proto.Dirent, int, uint64) {
+	var entries []proto.Dirent
 	n := len(buf)
 
 	for len(buf) > 0 {
@@ -74,7 +74,7 @@ func parse(buf []byte, offset uint64) ([]*proto.Dirent, int, uint64) {
 			return entries, n, offset
 		}
 
-		entries = append(entries, &proto.Dirent{
+		entries = append(entries, proto.Dirent{
 			Qid: struct {
 				Type    uint8
 				Version uint32

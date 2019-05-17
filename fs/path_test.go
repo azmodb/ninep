@@ -94,27 +94,26 @@ func TestPathSplit(t *testing.T) {
 func TestHasPrefix(t *testing.T) {
 	for num, test := range []struct {
 		path   string
-		prefix []string
+		prefix string
 		want   bool
 	}{
-		{"/a/b/c", []string{"a", "b", "c"}, true},
-		{"a/b/c", []string{"a", "b", "c"}, true},
-		{"/a/b/c", []string{"a", "b", "c"}, true},
-		{"a/b/c", []string{"a", "b", "c"}, true},
+		{"/a/b/c", "/a/b/c", true},
+		{"/a/b/c/", "/a/b/c", true},
+		{"a/b/c", "/a/b/c", true},
 
-		{"/", []string{}, true},
-		{"", []string{}, true},
+		{"/", "/", true},
+		{"", "", true},
 
-		{"/a/b/c", []string{"a", "c"}, false},
-		{"/a/ba", []string{"a", "b"}, false},
-		{"/a/ba/c", []string{"a", "b"}, false},
+		{"/a/b/c", "/a/b", true},
+		{"/a/ba", "/a/b", false},
+		{"/a/ba/c", "/a/b", false},
 
-		{"/a", []string{"a", "b"}, false},
+		{"/a", "/a/b", false},
 	} {
 		res := hasPrefix(test.path, test.prefix)
 
 		if res != test.want {
-			t.Fatalf("hasPrefix(%d): expeceted result %v, got %v", num, test.want, res)
+			t.Fatalf("hasPrefix(%d): differ %q, got %q", num, test.prefix, test.path)
 		}
 	}
 }

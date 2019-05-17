@@ -52,12 +52,12 @@ func split(path string) []string {
 
 // hasPrefix will determine if path starts with prefix from the point of
 // view of a filesystem.
-func hasPrefix(path string, prefix []string) bool {
-	if len(prefix) == 0 {
+func hasPrefix(path, root string) bool {
+	if root == "" || root == separator {
 		return true
 	}
 
-	names := split(path)
+	names, prefix := split(path), split(root)
 	if len(prefix) > len(names) {
 		return false
 	}
@@ -75,19 +75,17 @@ func isReserved(name string) bool {
 	return name == "" || name == "." || name == ".."
 }
 
-/*
 // chroot joins root and path into a single path, adding a separator if
-// necessary. chroot returns false it path does not start with prefix
-// from the point of view of a filesystem.
-func (fs *unixFS) chroot(path string) (string, bool) {
-	if fs.root == "" || fs.root == separator {
+// necessary. chroot returns false if the result does not start with
+// root from the point of view of a filesystem.
+func chroot(root, path string) (string, bool) {
+	if root == "" || root == separator {
 		return pathClean(path), true
 	}
 
-	path = filepath.Join(fs.root, clean(path))
-	if !hasPrefix(path, fs.prefix) {
+	path = filepath.Join(root, clean(path))
+	if !hasPrefix(path, root) {
 		return "", false
 	}
 	return path, true
 }
-*/
