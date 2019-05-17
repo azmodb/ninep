@@ -67,7 +67,7 @@ func (q *Qid) Unmarshal(data []byte) ([]byte, error) {
 	q.Type = binary.Uint8(data[:1])
 	q.Version = binary.Uint32(data[1:5])
 	q.Path = binary.Uint64(data[5:13])
-	return data, nil
+	return data[13:], nil
 }
 
 // Qid type field represents the type of a file (directory, etc.),
@@ -112,7 +112,7 @@ func (q Qid) String() string {
 		t += "L"
 	}
 	if len(t) == 0 {
-		t = "unknown"
+		t = "f"
 	}
 	return fmt.Sprintf("type:%q version:%d path:%.16x", t, q.Version, q.Path)
 }

@@ -69,6 +69,8 @@ if [ ! $(docker ps --quiet --filter name=${CONTAINER}) ]; then
 		mkdir -p /tmp/dir-test/dir3
 
 		touch /tmp/dir-test/dir1/sub1/subsub1/file1
+		touch /tmp/dir-test/dir1/file1
+		touch /tmp/dir-test/dir1/file2
 		touch /tmp/dir-test/file1
 		touch /tmp/dir-test/file2
 		touch /tmp/dir-test/file3

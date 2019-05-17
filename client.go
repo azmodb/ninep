@@ -196,11 +196,12 @@ func (c *Client) recv() (err error) {
 			} else {
 				f.Done(unix.Errno(rlerror.Errno))
 			}
+			log.Debugf("-> %s %s", header, rlerror)
 		default:
 			err = c.dec.Decode(f.rx)
 			f.Done(err)
+			log.Debugf("-> %s %s", header, f.rx)
 		}
-		log.Debugf("-> %s %s", header, f.rx)
 	}
 
 	c.writer.Lock()
@@ -284,9 +285,15 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		return nil, err
 	}
 
-	f := &Fid{c: c, path: export, num: fidnum}
-	_, err := f.stat(proto.GetAttrBasic) // initialize fid
-	return f, err
+	attr, err := stat(c, fidnum, proto.GetAttrBasic)
+	if err != nil {
+		return nil, err
+	}
+
+	fid := &Fid{c: c, num: fidnum, fi: &fileInfo{path: export}}
+	fid.fi.Rgetattr = attr
+	fid.fi.iounit = 0
+	return fid, nil
 }
 
 type pool struct {
