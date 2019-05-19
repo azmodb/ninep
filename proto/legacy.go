@@ -7,17 +7,6 @@ import (
 	"github.com/azmodb/ninep/binary"
 )
 
-// Header represents the protocol header. Each 9P message begins with a
-// four–byte size field specifying the length in bytes of the complete
-// message including the four bytes of the size field itself.
-//
-// The next byte is the message type and two bytes representing an
-// identifying tag.
-type Header struct {
-	Type MessageType // Type byte is the 9P message type.
-	Tag  uint16
-}
-
 // Tversion request negotiates the protocol version and message size to be
 // used on the connection and initializes the connection for I/O. Tversion
 // must be the first message sent on the 9P connection, and the client
@@ -82,6 +71,9 @@ type Twalk struct {
 	Names []string
 }
 
+// Type returns the message type.
+func (m Twalk) MessageType() MessageType { return MessageTwalk }
+
 // String implements fmt.Stringer.
 func (m Twalk) String() string {
 	return fmt.Sprintf("fid:%d new_fid:%d names:%v", m.Fid, m.NewFid, m.Names)
@@ -131,6 +123,9 @@ func (m *Twalk) Decode(buf *binary.Buffer) {
 // If the first path in the corresponding Twalk request cannot be walked,
 // an Rerror message is returned instead.
 type Rwalk []Qid
+
+// Type returns the message type.
+func (m Rwalk) MessageType() MessageType { return MessageRwalk }
 
 // String implements fmt.Stringer.
 func (m Rwalk) String() string {
@@ -200,6 +195,9 @@ type Rread struct {
 	Data []byte
 }
 
+// Type returns the message type.
+func (m Rread) MessageType() MessageType { return MessageRread }
+
 // String implements fmt.Stringer.
 func (m Rread) String() string {
 	return fmt.Sprintf("data_len:%d", len(m.Data))
@@ -232,6 +230,9 @@ type Twrite struct {
 	Offset uint64
 	Data   []byte
 }
+
+// Type returns the message type.
+func (m Twrite) MessageType() MessageType { return MessageTwrite }
 
 // String implements fmt.Stringer.
 func (m Twrite) String() string {

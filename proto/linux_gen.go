@@ -9,6 +9,9 @@ import (
 	"github.com/azmodb/ninep/binary"
 )
 
+// Type returns the message type.
+func (m Tlauth) MessageType() MessageType { return MessageTlauth }
+
 // String implements fmt.Stringer.
 func (m Tlauth) String() string {
 	return fmt.Sprintf("auth_fid:%d user_name:%q path:%q uid:%d", m.AuthFid, m.UserName, m.Path, m.Uid)
@@ -35,6 +38,31 @@ func (m *Tlauth) Decode(buf *binary.Buffer) {
 	m.Path = buf.String()
 	m.Uid = buf.Uint32()
 }
+
+// Type returns the message type.
+func (m Rlauth) MessageType() MessageType { return MessageRlauth }
+
+// String implements fmt.Stringer.
+func (m Rlauth) String() string { return fmt.Sprintf("%s", m.Qid) }
+
+// Len returns the length of the message in bytes.
+func (m Rlauth) Len() int { return 13 }
+
+// Reset resets all state.
+func (m *Rlauth) Reset() { *m = Rlauth{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rlauth) Encode(buf *binary.Buffer) {
+	m.Qid.Encode(buf)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rlauth) Decode(buf *binary.Buffer) {
+	m.Qid.Decode(buf)
+}
+
+// Type returns the message type.
+func (m Tlattach) MessageType() MessageType { return MessageTlattach }
 
 // String implements fmt.Stringer.
 func (m Tlattach) String() string {
@@ -65,6 +93,31 @@ func (m *Tlattach) Decode(buf *binary.Buffer) {
 	m.Uid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rlattach) MessageType() MessageType { return MessageRlattach }
+
+// String implements fmt.Stringer.
+func (m Rlattach) String() string { return fmt.Sprintf("%s", m.Qid) }
+
+// Len returns the length of the message in bytes.
+func (m Rlattach) Len() int { return 13 }
+
+// Reset resets all state.
+func (m *Rlattach) Reset() { *m = Rlattach{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rlattach) Encode(buf *binary.Buffer) {
+	m.Qid.Encode(buf)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rlattach) Decode(buf *binary.Buffer) {
+	m.Qid.Decode(buf)
+}
+
+// Type returns the message type.
+func (m Rlerror) MessageType() MessageType { return MessageRlerror }
+
 // String implements fmt.Stringer.
 func (m Rlerror) String() string { return fmt.Sprintf("errno:%d", m.Errno) }
 
@@ -84,6 +137,9 @@ func (m *Rlerror) Decode(buf *binary.Buffer) {
 	m.Errno = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Tstatfs) MessageType() MessageType { return MessageTstatfs }
+
 // String implements fmt.Stringer.
 func (m Tstatfs) String() string { return fmt.Sprintf("fid:%d", m.Fid) }
 
@@ -102,6 +158,9 @@ func (m Tstatfs) Encode(buf *binary.Buffer) {
 func (m *Tstatfs) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
+
+// Type returns the message type.
+func (m Rstatfs) MessageType() MessageType { return MessageRstatfs }
 
 // String implements fmt.Stringer.
 func (m Rstatfs) String() string {
@@ -140,6 +199,9 @@ func (m *Rstatfs) Decode(buf *binary.Buffer) {
 	m.NameLength = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Tlopen) MessageType() MessageType { return MessageTlopen }
+
 // String implements fmt.Stringer.
 func (m Tlopen) String() string { return fmt.Sprintf("fid:%d flags:%d", m.Fid, m.Flags) }
 
@@ -161,6 +223,9 @@ func (m *Tlopen) Decode(buf *binary.Buffer) {
 	m.Flags = Flag(buf.Uint32())
 }
 
+// Type returns the message type.
+func (m Rlopen) MessageType() MessageType { return MessageRlopen }
+
 // String implements fmt.Stringer.
 func (m Rlopen) String() string { return fmt.Sprintf("%s iounit:%d", m.Qid, m.Iounit) }
 
@@ -181,6 +246,9 @@ func (m *Rlopen) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 	m.Iounit = buf.Uint32()
 }
+
+// Type returns the message type.
+func (m Tlcreate) MessageType() MessageType { return MessageTlcreate }
 
 // String implements fmt.Stringer.
 func (m Tlcreate) String() string {
@@ -211,6 +279,9 @@ func (m *Tlcreate) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rlcreate) MessageType() MessageType { return MessageRlcreate }
+
 // String implements fmt.Stringer.
 func (m Rlcreate) String() string { return fmt.Sprintf("%s iounit:%d", m.Qid, m.Iounit) }
 
@@ -231,6 +302,9 @@ func (m *Rlcreate) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 	m.Iounit = buf.Uint32()
 }
+
+// Type returns the message type.
+func (m Tsymlink) MessageType() MessageType { return MessageTsymlink }
 
 // String implements fmt.Stringer.
 func (m Tsymlink) String() string {
@@ -258,6 +332,31 @@ func (m *Tsymlink) Decode(buf *binary.Buffer) {
 	m.Target = buf.String()
 	m.Gid = buf.Uint32()
 }
+
+// Type returns the message type.
+func (m Rsymlink) MessageType() MessageType { return MessageRsymlink }
+
+// String implements fmt.Stringer.
+func (m Rsymlink) String() string { return fmt.Sprintf("%s", m.Qid) }
+
+// Len returns the length of the message in bytes.
+func (m Rsymlink) Len() int { return 13 }
+
+// Reset resets all state.
+func (m *Rsymlink) Reset() { *m = Rsymlink{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rsymlink) Encode(buf *binary.Buffer) {
+	m.Qid.Encode(buf)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rsymlink) Decode(buf *binary.Buffer) {
+	m.Qid.Decode(buf)
+}
+
+// Type returns the message type.
+func (m Tmknod) MessageType() MessageType { return MessageTmknod }
 
 // String implements fmt.Stringer.
 func (m Tmknod) String() string {
@@ -290,6 +389,31 @@ func (m *Tmknod) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rmknod) MessageType() MessageType { return MessageRmknod }
+
+// String implements fmt.Stringer.
+func (m Rmknod) String() string { return fmt.Sprintf("%s", m.Qid) }
+
+// Len returns the length of the message in bytes.
+func (m Rmknod) Len() int { return 13 }
+
+// Reset resets all state.
+func (m *Rmknod) Reset() { *m = Rmknod{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rmknod) Encode(buf *binary.Buffer) {
+	m.Qid.Encode(buf)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rmknod) Decode(buf *binary.Buffer) {
+	m.Qid.Decode(buf)
+}
+
+// Type returns the message type.
+func (m Trename) MessageType() MessageType { return MessageTrename }
+
 // String implements fmt.Stringer.
 func (m Trename) String() string {
 	return fmt.Sprintf("fid:%d directory_fid:%d name:%q", m.Fid, m.DirectoryFid, m.Name)
@@ -315,6 +439,9 @@ func (m *Trename) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
+// Type returns the message type.
+func (m Rrename) MessageType() MessageType { return MessageRrename }
+
 // String implements fmt.Stringer.
 func (m Rrename) String() string { return "" }
 
@@ -329,6 +456,9 @@ func (m Rrename) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rrename) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Treadlink) MessageType() MessageType { return MessageTreadlink }
 
 // String implements fmt.Stringer.
 func (m Treadlink) String() string { return fmt.Sprintf("fid:%d", m.Fid) }
@@ -349,6 +479,9 @@ func (m *Treadlink) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rreadlink) MessageType() MessageType { return MessageRreadlink }
+
 // String implements fmt.Stringer.
 func (m Rreadlink) String() string { return fmt.Sprintf("target:%q", m.Target) }
 
@@ -367,6 +500,9 @@ func (m Rreadlink) Encode(buf *binary.Buffer) {
 func (m *Rreadlink) Decode(buf *binary.Buffer) {
 	m.Target = buf.String()
 }
+
+// Type returns the message type.
+func (m Tgetattr) MessageType() MessageType { return MessageTgetattr }
 
 // String implements fmt.Stringer.
 func (m Tgetattr) String() string { return fmt.Sprintf("fid:%d request_mask:%d", m.Fid, m.RequestMask) }
@@ -388,6 +524,9 @@ func (m *Tgetattr) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 	m.RequestMask = buf.Uint64()
 }
+
+// Type returns the message type.
+func (m Rgetattr) MessageType() MessageType { return MessageRgetattr }
 
 // String implements fmt.Stringer.
 func (m Rgetattr) String() string {
@@ -440,6 +579,9 @@ func (m *Rgetattr) Decode(buf *binary.Buffer) {
 	m.DataVersion = buf.Uint64()
 }
 
+// Type returns the message type.
+func (m Tsetattr) MessageType() MessageType { return MessageTsetattr }
+
 // String implements fmt.Stringer.
 func (m Tsetattr) String() string {
 	return fmt.Sprintf("fid:%d valid:%d mode:%q uid:%d gid:%d size:%d atime:%d mtime:%d", m.Fid, m.Valid, m.Mode, m.Uid, m.Gid, m.Size, m.Atime.Nano(), m.Mtime.Nano())
@@ -475,6 +617,9 @@ func (m *Tsetattr) Decode(buf *binary.Buffer) {
 	m.Mtime = decodeTimespec(buf)
 }
 
+// Type returns the message type.
+func (m Rsetattr) MessageType() MessageType { return MessageRsetattr }
+
 // String implements fmt.Stringer.
 func (m Rsetattr) String() string { return "" }
 
@@ -489,6 +634,9 @@ func (m Rsetattr) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rsetattr) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Txattrwalk) MessageType() MessageType { return MessageTxattrwalk }
 
 // String implements fmt.Stringer.
 func (m Txattrwalk) String() string {
@@ -515,6 +663,9 @@ func (m *Txattrwalk) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
+// Type returns the message type.
+func (m Rxattrwalk) MessageType() MessageType { return MessageRxattrwalk }
+
 // String implements fmt.Stringer.
 func (m Rxattrwalk) String() string { return fmt.Sprintf("size:%d", m.Size) }
 
@@ -533,6 +684,9 @@ func (m Rxattrwalk) Encode(buf *binary.Buffer) {
 func (m *Rxattrwalk) Decode(buf *binary.Buffer) {
 	m.Size = buf.Uint64()
 }
+
+// Type returns the message type.
+func (m Txattrcreate) MessageType() MessageType { return MessageTxattrcreate }
 
 // String implements fmt.Stringer.
 func (m Txattrcreate) String() string {
@@ -561,6 +715,9 @@ func (m *Txattrcreate) Decode(buf *binary.Buffer) {
 	m.Flag = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rxattrcreate) MessageType() MessageType { return MessageRxattrcreate }
+
 // String implements fmt.Stringer.
 func (m Rxattrcreate) String() string { return "" }
 
@@ -575,6 +732,9 @@ func (m Rxattrcreate) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rxattrcreate) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Treaddir) MessageType() MessageType { return MessageTreaddir }
 
 // String implements fmt.Stringer.
 func (m Treaddir) String() string {
@@ -601,6 +761,9 @@ func (m *Treaddir) Decode(buf *binary.Buffer) {
 	m.Count = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Tfsync) MessageType() MessageType { return MessageTfsync }
+
 // String implements fmt.Stringer.
 func (m Tfsync) String() string { return fmt.Sprintf("fid:%d", m.Fid) }
 
@@ -620,6 +783,9 @@ func (m *Tfsync) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rfsync) MessageType() MessageType { return MessageRfsync }
+
 // String implements fmt.Stringer.
 func (m Rfsync) String() string { return "" }
 
@@ -634,6 +800,9 @@ func (m Rfsync) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rfsync) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Tlock) MessageType() MessageType { return MessageTlock }
 
 // String implements fmt.Stringer.
 func (m Tlock) String() string {
@@ -668,6 +837,9 @@ func (m *Tlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
+// Type returns the message type.
+func (m Rlock) MessageType() MessageType { return MessageRlock }
+
 // String implements fmt.Stringer.
 func (m Rlock) String() string { return fmt.Sprintf("status:%d", m.Status) }
 
@@ -686,6 +858,9 @@ func (m Rlock) Encode(buf *binary.Buffer) {
 func (m *Rlock) Decode(buf *binary.Buffer) {
 	m.Status = buf.Uint8()
 }
+
+// Type returns the message type.
+func (m Tgetlock) MessageType() MessageType { return MessageTgetlock }
 
 // String implements fmt.Stringer.
 func (m Tgetlock) String() string {
@@ -718,6 +893,9 @@ func (m *Tgetlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
+// Type returns the message type.
+func (m Rgetlock) MessageType() MessageType { return MessageRgetlock }
+
 // String implements fmt.Stringer.
 func (m Rgetlock) String() string {
 	return fmt.Sprintf("type:%d start:%d length:%d proc_id:%d client_id:%q", m.Type, m.Start, m.Length, m.ProcID, m.ClientID)
@@ -747,6 +925,9 @@ func (m *Rgetlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
+// Type returns the message type.
+func (m Tlink) MessageType() MessageType { return MessageTlink }
+
 // String implements fmt.Stringer.
 func (m Tlink) String() string {
 	return fmt.Sprintf("directory_fid:%d target:%d name:%q", m.DirectoryFid, m.Target, m.Name)
@@ -772,6 +953,9 @@ func (m *Tlink) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
+// Type returns the message type.
+func (m Rlink) MessageType() MessageType { return MessageRlink }
+
 // String implements fmt.Stringer.
 func (m Rlink) String() string { return "" }
 
@@ -786,6 +970,9 @@ func (m Rlink) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rlink) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Tmkdir) MessageType() MessageType { return MessageTmkdir }
 
 // String implements fmt.Stringer.
 func (m Tmkdir) String() string {
@@ -814,6 +1001,31 @@ func (m *Tmkdir) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
+// Type returns the message type.
+func (m Rmkdir) MessageType() MessageType { return MessageRmkdir }
+
+// String implements fmt.Stringer.
+func (m Rmkdir) String() string { return fmt.Sprintf("%s", m.Qid) }
+
+// Len returns the length of the message in bytes.
+func (m Rmkdir) Len() int { return 13 }
+
+// Reset resets all state.
+func (m *Rmkdir) Reset() { *m = Rmkdir{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rmkdir) Encode(buf *binary.Buffer) {
+	m.Qid.Encode(buf)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rmkdir) Decode(buf *binary.Buffer) {
+	m.Qid.Decode(buf)
+}
+
+// Type returns the message type.
+func (m Trenameat) MessageType() MessageType { return MessageTrenameat }
+
 // String implements fmt.Stringer.
 func (m Trenameat) String() string {
 	return fmt.Sprintf("old_directory_fid:%d old_name:%q new_directory_fid:%d new_name:%q", m.OldDirectoryFid, m.OldName, m.NewDirectoryFid, m.NewName)
@@ -841,6 +1053,9 @@ func (m *Trenameat) Decode(buf *binary.Buffer) {
 	m.NewName = buf.String()
 }
 
+// Type returns the message type.
+func (m Rrenameat) MessageType() MessageType { return MessageRrenameat }
+
 // String implements fmt.Stringer.
 func (m Rrenameat) String() string { return "" }
 
@@ -855,6 +1070,9 @@ func (m Rrenameat) Encode(buf *binary.Buffer) {}
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rrenameat) Decode(buf *binary.Buffer) {}
+
+// Type returns the message type.
+func (m Tunlinkat) MessageType() MessageType { return MessageTunlinkat }
 
 // String implements fmt.Stringer.
 func (m Tunlinkat) String() string {
@@ -880,6 +1098,9 @@ func (m *Tunlinkat) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 	m.Flags = Flag(buf.Uint32())
 }
+
+// Type returns the message type.
+func (m Runlinkat) MessageType() MessageType { return MessageRunlinkat }
 
 // String implements fmt.Stringer.
 func (m Runlinkat) String() string { return "" }

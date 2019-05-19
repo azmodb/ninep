@@ -122,6 +122,13 @@ func (g *Generator) print(format string, args ...interface{}) {
 	fmt.Fprintf(g.buf, format+"\n", args...)
 }
 
+func (g *Generator) genStructType(s Struct) {
+	g.print("// Type returns the message type.")
+	g.print("func (m %s) MessageType() MessageType { return Message%s }",
+		s.Name, s.Name,
+	)
+}
+
 func (g *Generator) genStructLen(s Struct) {
 	g.print("// Len returns the length of the message in bytes.")
 	g.printf("func (m %s) Len() int {", s.Name)
@@ -355,12 +362,8 @@ func (g *Generator) Generate(r io.Reader, name string) error {
 		if _, found := ignore[s.Name]; found {
 			continue
 		}
-		switch s.Type {
-		// case "uint16", "uint32":
-		// 	g.genIdentLen(s)
-		// 	g.genIdentEncode(s)
-		// 	g.genIdentDecode(s)
-		case "struct":
+		if s.Type == "struct" {
+			g.genStructType(s)
 			g.genStructString(s)
 			g.genStructLen(s)
 			g.genStructReset(s)

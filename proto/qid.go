@@ -26,8 +26,6 @@ type Qid struct {
 	Path uint64
 }
 
-var _ Message = (*Qid)(nil) // Qid implements Message interface
-
 // Len returns the length of the message in bytes.
 func (q Qid) Len() int { return 13 }
 

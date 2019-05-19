@@ -87,6 +87,8 @@ const (
 // Message represents a 9P message and is used to access fields common to
 // all 9P messages.
 type Message interface {
+	MessageType() MessageType
+
 	// Len returns the length of the message in bytes.
 	Len() int
 

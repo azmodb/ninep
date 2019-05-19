@@ -36,7 +36,9 @@ type Tlauth struct {
 // Rlauth reply is sent in response to a Tlauth request. If a server does
 // not require authentication, it can reply to a Tlauth message with an
 // Rerror message.
-type Rlauth = Qid
+type Rlauth struct {
+	Qid
+}
 
 // Tlattach message serves as a fresh introduction from a user on the
 // client machine to the server.
@@ -64,7 +66,9 @@ type Tlattach struct {
 // result of the attach transaction, the client will have a connection to
 // the root directory of the desired file tree, represented by the
 // returned qid.
-type Rlattach = Qid
+type Rlattach struct {
+	Qid
+}
 
 // Rlerror message (there is no Tlerror) is used to return an errno
 // number describing the failure of a transaction.
@@ -136,7 +140,9 @@ type Tsymlink struct {
 
 // Rsymlink message contains a server's reply to a Tsymlink request. The
 // qid for the new symbolic link is returned in the reply.
-type Rsymlink = Qid
+type Rsymlink struct {
+	Qid
+}
 
 // Tmknod creates a device node name in directory fid with major and
 // minor numbers. Mode contains Linux mknod(2) mode bits.
@@ -151,7 +157,9 @@ type Tmknod struct {
 
 // Rmknod message contains a server's reply to a Tmknod request. The qid
 // for the new device node is returned in the reply.
-type Rmknod = Qid
+type Rmknod struct {
+	Qid
+}
 
 // Trename renames a file system object referenced by fid, to name in
 // the directory referenced by directory fid.
@@ -338,6 +346,9 @@ type Rreaddir struct {
 	Data []byte
 }
 
+// Type returns the message type.
+func (m Rreaddir) MessageType() MessageType { return MessageRreaddir }
+
 // String implements fmt.Stringer.
 func (m Rreaddir) String() string {
 	return fmt.Sprintf("data_len:%d", len(m.Data))
@@ -431,7 +442,9 @@ type Tmkdir struct {
 }
 
 // Rmkdir message contains a server's reply to a Tmkdir message.
-type Rmkdir = Qid
+type Rmkdir struct {
+	Qid
+}
 
 // Trenameat changes the name of a file from oldname to newname, possible
 // moving it from old directory represented by fid to new directory

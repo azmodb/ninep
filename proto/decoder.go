@@ -52,26 +52,22 @@ const maxInt = int64(^uint(0) >> 1)
 // DecodeHeader decodes the next 9P header from the input stream.
 // DecodeHeader and Decode must be called in pairs to read 9P messages
 // from the connection.
-func (d *Decoder) DecodeHeader(h *Header) error {
+func (d *Decoder) DecodeHeader() (MessageType, uint16, error) {
 	if err := d.readFull(d.header[:]); err != nil {
-		return err
+		return 0, 0, err
 	}
 
 	size := binary.Uint32(d.header[:4])
 	if size < HeaderSize {
-		return ErrMessageTooSmall
+		return 0, 0, ErrMessageTooSmall
 	}
 	if int64(size) > maxInt || size > d.maxMessageSize() {
 		d.discard(size - HeaderSize)
-		return ErrMessageTooLarge
+		return 0, 0, ErrMessageTooLarge
 	}
 
 	d.pending = int(size) - HeaderSize
-	if h != nil {
-		h.Type = MessageType(d.header[4])
-		h.Tag = binary.Uint16(d.header[5:7])
-	}
-	return nil
+	return MessageType(d.header[4]), binary.Uint16(d.header[5:7]), nil
 }
 
 // Decode decodes the next 9P message from the input stream and stores it

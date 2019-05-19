@@ -44,7 +44,7 @@ func (e *Encoder) maxMessageSize() uint32 {
 	return e.MaxMessageSize
 }
 
-func (e *Encoder) encHeader(size uint32, h *Header) error {
+func (e *Encoder) encHeader(size uint32, t uint8, tag uint16) error {
 	if size > e.maxMessageSize() {
 		return ErrMessageTooLarge
 	}
@@ -52,7 +52,8 @@ func (e *Encoder) encHeader(size uint32, h *Header) error {
 	e.buf.Reset() // reset message buffer
 
 	e.buf.PutUint32(size)
-	h.Encode(e.buf)
+	e.buf.PutUint8(t)
+	e.buf.PutUint16(tag)
 	if err := e.buf.Err(); err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ func (e *Encoder) encPayload(data []byte) error {
 }
 
 // Encode encodes a 9P header and message to the connection.
-func (e *Encoder) Encode(h *Header, m Message) error {
+func (e *Encoder) Encode(tag uint16, m Message) error {
 	if e.err != nil {
 		return e.err
 	}
@@ -89,7 +90,7 @@ func (e *Encoder) Encode(h *Header, m Message) error {
 	}
 
 	size := HeaderSize + uint32(m.Len())
-	err := e.encHeader(size, h)
+	err := e.encHeader(size, uint8(m.MessageType()), tag)
 	if err != nil {
 		return err
 	}

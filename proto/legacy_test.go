@@ -6,8 +6,6 @@ package proto
 import "math"
 
 var generatedLegacyPackets = []packet{
-	{&Header{}, &Header{}},
-	{&Header{Type: math.MaxUint8, Tag: math.MaxUint16}, &Header{}},
 	{&Tversion{}, &Tversion{}},
 	{&Tversion{MessageSize: math.MaxUint32, Version: string16.String()}, &Tversion{}},
 	{&Rversion{}, &Rversion{}},

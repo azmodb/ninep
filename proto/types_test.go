@@ -11,17 +11,6 @@ import (
 )
 
 var customTestPackets = []packet{
-	{&Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}, &Qid{}},
-	{&Qid{}, &Qid{}},
-
-	{&Dirent{
-		Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
-		math.MaxUint64,
-		math.MaxUint8,
-		string16.String(),
-	}, &Dirent{}},
-	{&Dirent{}, &Dirent{}},
-
 	{&Rgetattr{
 		Valid:       math.MaxUint64,
 		Qid:         Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
@@ -131,8 +120,14 @@ func TestRgetattrLen(t *testing.T) {
 
 func TestQidCodec(t *testing.T) {
 	buf := make([]byte, 0, 13)
-	for n, test := range customTestPackets[:2] {
-		in, out := test.in.(*Qid), test.out.(*Qid)
+	for n, test := range []struct {
+		in  *Qid
+		out *Qid
+	}{
+		{&Qid{math.MaxUint8, math.MaxUint32, math.MaxUint64}, &Qid{}},
+		{&Qid{}, &Qid{}},
+	} {
+		in, out := test.in, test.out
 		buf = buf[:0]
 
 		buf, m, err := in.Marshal(buf)
@@ -156,16 +151,28 @@ func TestQidCodec(t *testing.T) {
 
 func TestDirentCodec(t *testing.T) {
 	buf := make([]byte, 0, 24)
-	for n, test := range customTestPackets[2:4] {
-		in, out := test.in.(*Dirent), test.out.(*Dirent)
+	for n, test := range []struct {
+		in  *Dirent
+		out *Dirent
+	}{
+		{&Dirent{
+			Qid{math.MaxUint8, math.MaxUint32, math.MaxUint64},
+			math.MaxUint64,
+			math.MaxUint8,
+			string16.String(),
+		}, &Dirent{}},
+		{&Dirent{}, &Dirent{}},
+	} {
+		in, out := test.in, test.out
 		buf = buf[:0]
 
 		buf, m, err := in.Marshal(buf)
 		if err != nil {
 			t.Fatalf("dirent(%d): marshal error: %v", n, err)
 		}
-		if m != 24 {
-			t.Fatalf("dirent(%d): expected marshal length 24, got %d", n, m)
+		if m != in.Len() {
+			t.Fatalf("dirent(%d): expected marshal length %d, got %d",
+				n, in.Len(), m)
 		}
 
 		if _, err = out.Unmarshal(buf); err != nil {
