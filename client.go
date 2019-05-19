@@ -2,7 +2,6 @@ package ninep
 
 import (
 	"context"
-	"errors"
 	"io"
 	"math"
 	"net"
@@ -33,14 +32,14 @@ type Client struct {
 	maxDataSize    uint32
 
 	mu       sync.Mutex // protects following
-	pending  map[uint16]*fcall
+	pending  map[uint16]*Fcall
 	closing  bool
 	shutdown bool
 }
 
 // Option sets Server or Client options such as logging, max message
 // size etc.
-type Option func(*Client) error
+type Option func(interface{}) error
 
 // Dial connects to an 9P2000.L server at the specified network address.
 //
@@ -64,9 +63,9 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 		maxDataSize:    proto.DefaultMaxDataSize,
 		c:              rwc,
 
-		pending: make(map[uint16]*fcall),
+		pending: make(map[uint16]*Fcall),
 		tag:     pool.NewGenerator(1, math.MaxUint16),
-		fid:     pool.NewGenerator(1, math.MaxUint16), // restrict
+		fid:     pool.NewGenerator(1, math.MaxUint32),
 	}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
@@ -86,17 +85,17 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 	return c, nil
 }
 
-type fcall struct {
-	typ proto.MessageType
-	tx  proto.Message
+// Fcall represents an active 9P RPC.
+type Fcall struct {
+	Type proto.MessageType // The type of the service and method to call.
+	Tx   proto.Message     // The argument to the function.
+	Rx   proto.Message     // The reply from the function.
 
-	rx  proto.Message
 	err error
-
-	ch chan<- *fcall
+	ch  chan<- *Fcall
 }
 
-func (f *fcall) Done(err error) {
+func (f *Fcall) done(err error) {
 	if f == nil {
 		return
 	}
@@ -111,12 +110,15 @@ func (f *fcall) Done(err error) {
 	}
 }
 
-func (f *fcall) Err() error { return f.err }
+// Err returns the first error that was encountered by the Fcall.
+func (f *Fcall) Err() error { return f.err }
 
-var (
-	errConnectionShutdown = errors.New("connection is shut down")
-	errTagOverflow        = errors.New("out of tags")
-	errFidOverflow        = errors.New("out of fids")
+const (
+	errConnectionShutdown = proto.Error("connection is shut down")
+	errTagOverflow        = proto.Error("out of tags")
+	errFidOverflow        = proto.Error("out of fids")
+
+	errVersionNotSupported = proto.Error("protocol not supported")
 )
 
 // Close calls the underlying connection's Close method. If the
@@ -132,41 +134,46 @@ func (c *Client) Close() error {
 	return c.c.Close()
 }
 
-func (c *Client) send(f *fcall) {
+func (c *Client) send(f *Fcall) {
 	c.mu.Lock()
 	if c.shutdown || c.closing {
 		c.mu.Unlock()
-		f.Done(errConnectionShutdown)
+		f.done(errConnectionShutdown)
 		return
 	}
 	v, ok := c.tag.Get()
 	if !ok {
 		c.mu.Unlock()
-		f.Done(errTagOverflow)
+		f.done(errTagOverflow)
 	}
 	tag := uint16(v)
 	c.pending[tag] = f
 	c.mu.Unlock()
 
+	log.Debugf("<- %s tag:%d %s", f.Type, tag, f.Tx)
 	c.writer.Lock()
-	c.header.Type, c.header.Tag = f.typ, tag
-	log.Debugf("<- %s %s", c.header, f.tx)
-	if err := c.enc.Encode(&c.header, f.tx); err != nil {
+	c.header.Type, c.header.Tag = f.Type, tag
+	if err := c.enc.Encode(&c.header, f.Tx); err != nil {
 		c.mu.Lock()
 		delete(c.pending, tag)
 		c.tag.Put(int64(tag))
 		c.mu.Unlock()
-		f.Done(err)
+		f.done(err)
 	}
 	c.writer.Unlock()
 }
 
-func (c *Client) rpc(typ proto.MessageType, tx, rx proto.Message) error {
-	ch := make(chan *fcall, 1)
-	f := &fcall{typ: typ, tx: tx, rx: rx, ch: ch}
+func (c *Client) rpc(t proto.MessageType, tx, rx proto.Message) error {
+	ch := make(chan *Fcall, 1)
+	f := &Fcall{Type: t, Tx: tx, Rx: rx, ch: ch}
 	go c.send(f)
 	f = <-ch
 	return f.err
+}
+
+func (c *Client) Do(ctx context.Context, fcall *Fcall, ch chan<- *Fcall) {
+	fcall.ch = ch
+	c.send(fcall)
 }
 
 func (c *Client) recv() (err error) {
@@ -193,15 +200,15 @@ func (c *Client) recv() (err error) {
 		case header.Type == proto.MessageRlerror:
 			rlerror = proto.Rlerror{}
 			if err = c.dec.Decode(&rlerror); err != nil {
-				f.Done(err)
+				f.done(err)
 			} else {
-				f.Done(unix.Errno(rlerror.Errno))
+				f.done(unix.Errno(rlerror.Errno))
 			}
 			log.Debugf("-> %s %s", header, rlerror)
 		default:
-			err = c.dec.Decode(f.rx)
-			f.Done(err)
-			log.Debugf("-> %s %s", header, f.rx)
+			err = c.dec.Decode(f.Rx)
+			f.done(err)
+			log.Debugf("-> %s %s", header, f.Rx)
 		}
 	}
 
@@ -218,7 +225,7 @@ func (c *Client) recv() (err error) {
 	for tag, f := range c.pending {
 		delete(c.pending, tag)
 		c.tag.Put(int64(tag))
-		f.Done(err)
+		f.done(err)
 	}
 	c.mu.Unlock()
 	c.writer.Unlock()
@@ -232,7 +239,7 @@ func (c *Client) handshake() error {
 		return err
 	}
 	if rx.Version != tx.Version {
-		return errors.New("server does not support " + proto.Version)
+		return errVersionNotSupported
 	}
 	if rx.MessageSize != c.maxMessageSize {
 		c.maxMessageSize = rx.MessageSize
@@ -251,7 +258,7 @@ func (c *Client) Auth(export, username string, uid int) (*Fid, error) {
 		return nil, errInvalidUid
 	}
 
-	return nil, errors.New("auth not implemented")
+	return nil, unix.ENOTSUP
 }
 
 // Attach introduces a new user to the server, and establishes Fid as the
