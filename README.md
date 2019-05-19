@@ -16,8 +16,10 @@ Package ninep serves network filesystems using the 9P2000.L protocol. The packag
 ## References
 
 - 9P2000.L protocol [overview](https://github.com/chaos/diod/blob/master/protocol.md)
-- 9P2000 [manpages](https://9p.io/sys/man/5/INDEX.html)
+- [VirtFS](https://landley.net/kdocs/ols/2010/ols2010-pages-109-120.pdf) -- A virtualization aware File System pass-through, Jujjuri et al, 2010.
+- Plan 9 from Bell Labs - [Section 5](https://9p.io/sys/man/5/INDEX.html) - Plan 9 File Protocol, 9P, Plan 9 Manual, 4nd edition, 2002.
 - [v9fs](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/Documentation/filesystems/9p.txt): Plan 9 Resource Sharing for Linux
+- Plan 9 Remote Resource Protocol Unix Extension [experimental-draft-9P2000-unix-extension](http://ericvh.github.io/9p-rfc/rfc9p2000.u.html), Van Hensbergen, 2009.
 
 
 ## Authors
