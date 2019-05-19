@@ -109,7 +109,7 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, errFidOverflow
 	}
 
-	tx := &proto.Twalk{Fid: f.num, NewFid: fidnum, Names: names}
+	tx := &proto.Twalk{Fid: f.num, NewFid: uint32(fidnum), Names: names}
 	rx := &proto.Rwalk{}
 	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
 		return 0, nil, err
@@ -118,13 +118,13 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, unix.ENOENT
 	}
 
-	attr, err := stat(f.c, fidnum, proto.GetAttrBasic)
+	attr, err := stat(f.c, tx.NewFid, proto.GetAttrBasic)
 	if err != nil {
 		return 0, nil, err
 	}
 
 	path := path.Join(f.fi.path, path.Join(names...))
-	return fidnum, &fileInfo{Rgetattr: attr, path: path}, nil
+	return tx.NewFid, &fileInfo{Rgetattr: attr, path: path}, nil
 }
 
 func (f *Fid) Walk(names ...string) (*Fid, error) {

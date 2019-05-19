@@ -11,6 +11,7 @@ import (
 
 	"github.com/azmodb/ninep/proto"
 	"github.com/azmodb/pkg/log"
+	"github.com/azmodb/pkg/pool"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,8 +26,8 @@ type Client struct {
 	dec *proto.Decoder
 	c   io.Closer
 
-	tag *pool
-	fid *pool
+	tag *pool.Generator
+	fid *pool.Generator
 
 	maxMessageSize uint32
 	maxDataSize    uint32
@@ -64,8 +65,8 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 		c:              rwc,
 
 		pending: make(map[uint16]*fcall),
-		tag:     newPool(math.MaxUint16),
-		fid:     newPool(math.MaxUint32),
+		tag:     pool.NewGenerator(1, math.MaxUint16),
+		fid:     pool.NewGenerator(1, math.MaxUint16), // restrict
 	}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
@@ -153,7 +154,7 @@ func (c *Client) send(f *fcall) {
 	if err := c.enc.Encode(&c.header, f.tx); err != nil {
 		c.mu.Lock()
 		delete(c.pending, tag)
-		c.tag.Put(uint32(tag))
+		c.tag.Put(int64(tag))
 		c.mu.Unlock()
 		f.Done(err)
 	}
@@ -180,7 +181,7 @@ func (c *Client) recv() (err error) {
 		c.mu.Lock()
 		f := c.pending[header.Tag]
 		delete(c.pending, header.Tag)
-		c.tag.Put(uint32(header.Tag))
+		c.tag.Put(int64(header.Tag))
 		c.mu.Unlock()
 
 		switch {
@@ -216,7 +217,7 @@ func (c *Client) recv() (err error) {
 	}
 	for tag, f := range c.pending {
 		delete(c.pending, tag)
-		c.tag.Put(uint32(tag))
+		c.tag.Put(int64(tag))
 		f.Done(err)
 	}
 	c.mu.Unlock()
@@ -275,7 +276,7 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 
 	tx := &proto.Tlattach{
 		AuthFid:  authnum,
-		Fid:      fidnum,
+		Fid:      uint32(fidnum),
 		Path:     export,
 		UserName: username,
 		Uid:      uint32(uid),
@@ -285,48 +286,13 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		return nil, err
 	}
 
-	attr, err := stat(c, fidnum, proto.GetAttrBasic)
+	attr, err := stat(c, tx.Fid, proto.GetAttrBasic)
 	if err != nil {
 		return nil, err
 	}
 
-	fid := &Fid{c: c, num: fidnum, fi: &fileInfo{path: export}}
+	fid := &Fid{c: c, num: tx.Fid, fi: &fileInfo{path: export}}
 	fid.fi.Rgetattr = attr
 	fid.fi.iounit = 0
 	return fid, nil
-}
-
-type pool struct {
-	mu  sync.Mutex
-	m   []uint32
-	cur uint32
-	max uint32
-}
-
-func newPool(max uint32) *pool {
-	return &pool{cur: 1, max: max}
-}
-
-func (p *pool) Get() (uint32, bool) {
-	p.mu.Lock()
-	if len(p.m) > 0 {
-		v := p.m[len(p.m)-1]
-		p.m = p.m[:len(p.m)-1]
-		p.mu.Unlock()
-		return v, true
-	}
-	if p.cur == p.max {
-		p.mu.Unlock()
-		return 0, false
-	}
-	v := p.cur
-	p.cur++
-	p.mu.Unlock()
-	return v, true
-}
-
-func (p *pool) Put(v uint32) {
-	p.mu.Lock()
-	p.m = append(p.m, v)
-	p.mu.Unlock()
 }

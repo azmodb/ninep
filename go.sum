@@ -4,5 +4,7 @@ github.com/azmodb/pkg v0.0.3 h1:Kp5bnbuNs7ODrUNlA+xWVXdEMRfjSJU8auyzKPTtcsA=
 github.com/azmodb/pkg v0.0.3/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
 github.com/azmodb/pkg v0.0.4 h1:QckhflEGlFLpGLCq8LgiKthsdhClXCWRmv7n/S8dpmQ=
 github.com/azmodb/pkg v0.0.4/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
+github.com/azmodb/pkg v0.0.5 h1:PUheR5/fBTJQ+yMxfaQAAuEiWjKeqhDo6Jt9rwtRdtI=
+github.com/azmodb/pkg v0.0.5/go.mod h1:YofuOu6gmfQrJYWZVR+77sLI3mG7jK0pf0xq1WGzgws=
 golang.org/x/sys v0.0.0-20190516110030-61b9204099cb h1:k07iPOt0d6nEnwXF+kHB+iEg+WSuKe/SOQuFM2QoD+E=
 golang.org/x/sys v0.0.0-20190516110030-61b9204099cb/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
