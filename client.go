@@ -20,7 +20,6 @@ import (
 type Client struct {
 	writer sync.Mutex // exclusive stream encoder
 	enc    *proto.Encoder
-	header proto.Header
 
 	dec *proto.Decoder
 	c   io.Closer
@@ -87,9 +86,11 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 
 // Fcall represents an active 9P RPC.
 type Fcall struct {
-	Type proto.MessageType // The type of the service and method to call.
-	Tx   proto.Message     // The argument to the function.
-	Rx   proto.Message     // The reply from the function.
+	// The argument to the 9P function and used to determine the message
+	// type.
+	Tx proto.Message
+
+	Rx proto.Message // The reply from the function.
 
 	err error
 	ch  chan<- *Fcall
@@ -150,10 +151,9 @@ func (c *Client) send(f *Fcall) {
 	c.pending[tag] = f
 	c.mu.Unlock()
 
-	log.Debugf("<- %s tag:%d %s", f.Type, tag, f.Tx)
+	log.Debugf("<- %s tag:%d %s", f.Tx.MessageType(), tag, f.Tx)
 	c.writer.Lock()
-	c.header.Type, c.header.Tag = f.Type, tag
-	if err := c.enc.Encode(&c.header, f.Tx); err != nil {
+	if err := c.enc.Encode(tag, f.Tx); err != nil {
 		c.mu.Lock()
 		delete(c.pending, tag)
 		c.tag.Put(int64(tag))
@@ -165,7 +165,7 @@ func (c *Client) send(f *Fcall) {
 
 func (c *Client) rpc(t proto.MessageType, tx, rx proto.Message) error {
 	ch := make(chan *Fcall, 1)
-	f := &Fcall{Type: t, Tx: tx, Rx: rx, ch: ch}
+	f := &Fcall{Tx: tx, Rx: rx, ch: ch}
 	go c.send(f)
 	f = <-ch
 	return f.err
@@ -177,18 +177,19 @@ func (c *Client) Do(ctx context.Context, fcall *Fcall, ch chan<- *Fcall) {
 }
 
 func (c *Client) recv() (err error) {
-	header, rlerror := proto.Header{}, proto.Rlerror{}
+	rlerror := proto.Rlerror{}
 
 	for err == nil {
-		if decErr := c.dec.DecodeHeader(&header); decErr != nil {
+		mtype, tag, decErr := c.dec.DecodeHeader()
+		if decErr != nil {
 			err = decErr
 			break
 		}
 
 		c.mu.Lock()
-		f := c.pending[header.Tag]
-		delete(c.pending, header.Tag)
-		c.tag.Put(int64(header.Tag))
+		f := c.pending[tag]
+		delete(c.pending, tag)
+		c.tag.Put(int64(tag))
 		c.mu.Unlock()
 
 		switch {
@@ -197,18 +198,18 @@ func (c *Client) recv() (err error) {
 			// enc.Encode partially failed, and fcall was already
 			// removed.
 			err = c.dec.Decode(nil)
-		case header.Type == proto.MessageRlerror:
+		case mtype == proto.MessageRlerror:
 			rlerror = proto.Rlerror{}
 			if err = c.dec.Decode(&rlerror); err != nil {
 				f.done(err)
 			} else {
 				f.done(unix.Errno(rlerror.Errno))
 			}
-			log.Debugf("-> %s %s", header, rlerror)
+			log.Debugf("-> %s tag:%d %s", mtype, tag, rlerror)
 		default:
 			err = c.dec.Decode(f.Rx)
 			f.done(err)
-			log.Debugf("-> %s %s", header, f.Rx)
+			log.Debugf("-> %s tag:%d %s", mtype, tag, f.Rx)
 		}
 	}
 
