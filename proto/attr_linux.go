@@ -5,12 +5,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EncodeStat encodes information about a file system object. The byte
-// sequence follow pretty closely the fields returned by the Linux
+// EncodeRgetattr encodes information about a file system object. The
+// byte sequence follow pretty closely the fields returned by the Linux
 // stat(2) system call.
 //
 // Valid is a bitmask indicating which fields are valid in the response.
-func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
+func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
 	buf.PutUint8(UnixFileTypeToQidType(st.Mode)) // marshal Qid
@@ -66,10 +66,10 @@ func UnixStatToRgetattr(st *unix.Stat_t) *Rgetattr {
 	}
 }
 
-// EncodeStatFS encodes information about a file system. The byte
+// EncodeRstatfs encodes information about a file system. The byte
 // sequence follow pretty closely the fields returned by the Linux
 // statfs(2) system call.
-func EncodeStatFS(buf *binary.Buffer, st *unix.Statfs_t) error {
+func EncodeRstatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
 	buf.PutUint32(uint32(st.Type))
 	buf.PutUint32(uint32(st.Bsize))
 	buf.PutUint64(st.Blocks)

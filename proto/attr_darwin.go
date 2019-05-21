@@ -5,16 +5,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EncodeStat encodes information about a file system object. The byte
-// sequence follow pretty closely the fields returned by the Linux
+// EncodeRgetattr encodes information about a file system object. The
+// byte sequence follow pretty closely the fields returned by the Linux
 // stat(2) system call.
 //
 // Valid is a bitmask indicating which fields are valid in the response.
-func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
+func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
 	buf.PutUint8(UnixFileTypeToQidType(uint32(st.Mode))) // marshal Qid
-	buf.PutUint32(uint32(st.Mtimespec.Nano() ^ st.Size<<8))
+	buf.PutUint32(uint32(st.Mtim.Nano() ^ st.Size<<8))
 	buf.PutUint64(st.Ino)
 
 	buf.PutUint32(uint32(st.Mode))
@@ -25,11 +25,11 @@ func EncodeStat(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(uint64(st.Size))
 	buf.PutUint64(uint64(st.Blksize))
 	buf.PutUint64(uint64(st.Blocks))
-	encodeTimespec(buf, st.Atimespec)
-	encodeTimespec(buf, st.Mtimespec)
-	encodeTimespec(buf, st.Ctimespec)
+	encodeTimespec(buf, st.Atim)
+	encodeTimespec(buf, st.Mtim)
+	encodeTimespec(buf, st.Ctim)
 
-	encodeTimespec(buf, st.Birthtimespec)
+	encodeTimespec(buf, st.Btim)
 	buf.PutUint64(uint64(st.Gen))
 	buf.PutUint64(0)
 
@@ -42,7 +42,7 @@ func UnixStatToRgetattr(st *unix.Stat_t) *Rgetattr {
 	return &Rgetattr{
 		Qid: Qid{
 			UnixFileTypeToQidType(uint32(st.Mode)),
-			uint32(st.Mtimespec.Nano() ^ st.Size<<8),
+			uint32(st.Mtim.Nano() ^ st.Size<<8),
 			st.Ino,
 		},
 
@@ -54,20 +54,20 @@ func UnixStatToRgetattr(st *unix.Stat_t) *Rgetattr {
 		Size:      uint64(st.Size),
 		BlockSize: uint64(st.Blksize),
 		Blocks:    uint64(st.Blocks),
-		Atime:     st.Atimespec,
-		Mtime:     st.Mtimespec,
-		Ctime:     st.Ctimespec,
+		Atime:     st.Atim,
+		Mtime:     st.Mtim,
+		Ctime:     st.Ctim,
 
-		Btime:       st.Birthtimespec,
+		Btime:       st.Btim,
 		Gen:         uint64(st.Gen),
 		DataVersion: 0,
 	}
 }
 
-// EncodeStatFS encodes information about a file system. The byte
+// EncodeRstatfs encodes information about a file system. The byte
 // sequence follow pretty closely the fields returned by the Linux
 // statfs(2) system call.
-func EncodeStatFS(buf *binary.Buffer, st *unix.Statfs_t) error {
+func EncodeRstatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
 	buf.PutUint32(st.Type)
 	buf.PutUint32(st.Bsize)
 	buf.PutUint64(st.Blocks)
