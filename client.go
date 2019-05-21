@@ -163,7 +163,7 @@ func (c *Client) send(f *Fcall) {
 	c.writer.Unlock()
 }
 
-func (c *Client) rpc(t proto.MessageType, tx, rx proto.Message) error {
+func (c *Client) rpc(tx, rx proto.Message) error {
 	ch := make(chan *Fcall, 1)
 	f := &Fcall{Tx: tx, Rx: rx, ch: ch}
 	go c.send(f)
@@ -236,7 +236,7 @@ func (c *Client) recv() (err error) {
 func (c *Client) handshake() error {
 	tx := &proto.Tversion{MessageSize: c.maxMessageSize, Version: proto.Version}
 	rx := &proto.Rversion{}
-	if err := c.rpc(proto.MessageTversion, tx, rx); err != nil {
+	if err := c.rpc(tx, rx); err != nil {
 		return err
 	}
 	if rx.Version != tx.Version {
@@ -290,7 +290,7 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		Uid:      uint32(uid),
 	}
 	rx := &proto.Rlattach{}
-	if err := c.rpc(proto.MessageTlattach, tx, rx); err != nil {
+	if err := c.rpc(tx, rx); err != nil {
 		return nil, err
 	}
 

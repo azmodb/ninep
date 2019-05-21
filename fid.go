@@ -72,13 +72,13 @@ func (f *Fid) clunk() error {
 	f.closing = true
 
 	tx, rx := &proto.Tclunk{Fid: f.num}, &proto.Rclunk{}
-	return f.c.rpc(proto.MessageTclunk, tx, rx)
+	return f.c.rpc(tx, rx)
 }
 
 func stat(c *Client, num uint32, mask uint64) (*proto.Rgetattr, error) {
 	tx := &proto.Tgetattr{Fid: num, RequestMask: mask}
 	rx := &proto.Rgetattr{}
-	err := c.rpc(proto.MessageTgetattr, tx, rx)
+	err := c.rpc(tx, rx)
 	return rx, err
 }
 
@@ -111,7 +111,7 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 
 	tx := &proto.Twalk{Fid: f.num, NewFid: uint32(fidnum), Names: names}
 	rx := &proto.Rwalk{}
-	if err := f.c.rpc(proto.MessageTwalk, tx, rx); err != nil {
+	if err := f.c.rpc(tx, rx); err != nil {
 		return 0, nil, err
 	}
 	if len(*rx) != len(names) {
@@ -174,7 +174,7 @@ func (f *Fid) readDirent(n int) (ents []proto.Dirent, err error) {
 
 	for {
 		rx.Reset()
-		if err = f.c.rpc(proto.MessageTreaddir, tx, rx); err != nil {
+		if err = f.c.rpc(tx, rx); err != nil {
 			if err == unix.EIO {
 				break
 			}
@@ -253,7 +253,7 @@ func (f *Fid) create(name string, flag int, perm os.FileMode) error {
 		Gid:   f.fi.Gid,
 	}
 	rx := &proto.Rlcreate{}
-	if err := f.c.rpc(proto.MessageTlcreate, tx, rx); err != nil {
+	if err := f.c.rpc(tx, rx); err != nil {
 		return err
 	}
 
@@ -284,7 +284,7 @@ func (f *Fid) mkdir(name string, perm os.FileMode) error {
 		Gid:          f.fi.Gid,
 	}
 	rx := &proto.Rmkdir{}
-	return f.c.rpc(proto.MessageTmkdir, tx, rx)
+	return f.c.rpc(tx, rx)
 }
 
 // Open opens the file represented by fid with specified flag
@@ -303,7 +303,7 @@ func (f *Fid) open(flag int) error {
 
 	tx := &proto.Tlopen{Fid: f.num, Flags: proto.NewFlag(flag)}
 	rx := &proto.Rlopen{}
-	if err := f.c.rpc(proto.MessageTlopen, tx, rx); err != nil {
+	if err := f.c.rpc(tx, rx); err != nil {
 		return err
 	}
 
@@ -334,7 +334,7 @@ func (f *Fid) remove() error {
 	f.opened = false
 	f.closing = true
 	tx, rx := &proto.Tremove{Fid: f.num}, &proto.Rremove{}
-	return f.c.rpc(proto.MessageTremove, tx, rx)
+	return f.c.rpc(tx, rx)
 }
 
 func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
