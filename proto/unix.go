@@ -12,7 +12,27 @@ import (
 // FixedDirentSize is the length of all fixed-width fields in a Dirent.
 const FixedDirentSize = 24
 
-// Dirent structure defines the format of 9P2000.L directory entries.
+// Dirents structure defines the format of 9P2000.L directory entries.
+type Dirents []Dirent
+
+// Unmarshal implements binary.Unmarshaler.
+func (m *Dirents) Unmarshal(data []byte) ([]byte, error) {
+	var err error
+	for len(data) > 0 {
+		var ent Dirent
+		if data, err = ent.Unmarshal(data); err != nil {
+			break
+		}
+		*m = append(*m, ent)
+	}
+	return data, err
+}
+
+func (m Dirents) Less(i, j int) bool { return m[i].Name < m[j].Name }
+func (m Dirents) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m Dirents) Len() int           { return len(m) }
+
+// Dirent structure defines the format of 9P2000.L a directory entry.
 type Dirent struct {
 	Qid
 	Offset uint64
