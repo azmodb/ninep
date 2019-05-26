@@ -9,7 +9,7 @@ import (
 	"github.com/azmodb/ninep/binary"
 )
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tversion) MessageType() MessageType { return MessageTversion }
 
 // String implements fmt.Stringer.
@@ -35,7 +35,7 @@ func (m *Tversion) Decode(buf *binary.Buffer) {
 	m.Version = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rversion) MessageType() MessageType { return MessageRversion }
 
 // String implements fmt.Stringer.
@@ -61,7 +61,7 @@ func (m *Rversion) Decode(buf *binary.Buffer) {
 	m.Version = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tflush) MessageType() MessageType { return MessageTflush }
 
 // String implements fmt.Stringer.
@@ -83,7 +83,7 @@ func (m *Tflush) Decode(buf *binary.Buffer) {
 	m.OldTag = buf.Uint16()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rflush) MessageType() MessageType { return MessageRflush }
 
 // String implements fmt.Stringer.
@@ -101,7 +101,7 @@ func (m Rflush) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rflush) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tread) MessageType() MessageType { return MessageTread }
 
 // String implements fmt.Stringer.
@@ -129,7 +129,7 @@ func (m *Tread) Decode(buf *binary.Buffer) {
 	m.Count = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rwrite) MessageType() MessageType { return MessageRwrite }
 
 // String implements fmt.Stringer.
@@ -151,7 +151,7 @@ func (m *Rwrite) Decode(buf *binary.Buffer) {
 	m.Count = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tclunk) MessageType() MessageType { return MessageTclunk }
 
 // String implements fmt.Stringer.
@@ -173,7 +173,7 @@ func (m *Tclunk) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rclunk) MessageType() MessageType { return MessageRclunk }
 
 // String implements fmt.Stringer.
@@ -191,7 +191,7 @@ func (m Rclunk) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rclunk) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tremove) MessageType() MessageType { return MessageTremove }
 
 // String implements fmt.Stringer.
@@ -213,7 +213,7 @@ func (m *Tremove) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rremove) MessageType() MessageType { return MessageRremove }
 
 // String implements fmt.Stringer.

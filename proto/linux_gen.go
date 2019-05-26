@@ -9,7 +9,7 @@ import (
 	"github.com/azmodb/ninep/binary"
 )
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlauth) MessageType() MessageType { return MessageTlauth }
 
 // String implements fmt.Stringer.
@@ -39,7 +39,7 @@ func (m *Tlauth) Decode(buf *binary.Buffer) {
 	m.Uid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlauth) MessageType() MessageType { return MessageRlauth }
 
 // String implements fmt.Stringer.
@@ -61,7 +61,7 @@ func (m *Rlauth) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlattach) MessageType() MessageType { return MessageTlattach }
 
 // String implements fmt.Stringer.
@@ -93,7 +93,7 @@ func (m *Tlattach) Decode(buf *binary.Buffer) {
 	m.Uid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlattach) MessageType() MessageType { return MessageRlattach }
 
 // String implements fmt.Stringer.
@@ -115,7 +115,7 @@ func (m *Rlattach) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlerror) MessageType() MessageType { return MessageRlerror }
 
 // String implements fmt.Stringer.
@@ -137,7 +137,7 @@ func (m *Rlerror) Decode(buf *binary.Buffer) {
 	m.Errno = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tstatfs) MessageType() MessageType { return MessageTstatfs }
 
 // String implements fmt.Stringer.
@@ -159,7 +159,7 @@ func (m *Tstatfs) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rstatfs) MessageType() MessageType { return MessageRstatfs }
 
 // String implements fmt.Stringer.
@@ -199,7 +199,7 @@ func (m *Rstatfs) Decode(buf *binary.Buffer) {
 	m.NameLength = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlopen) MessageType() MessageType { return MessageTlopen }
 
 // String implements fmt.Stringer.
@@ -223,7 +223,7 @@ func (m *Tlopen) Decode(buf *binary.Buffer) {
 	m.Flags = Flag(buf.Uint32())
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlopen) MessageType() MessageType { return MessageRlopen }
 
 // String implements fmt.Stringer.
@@ -247,7 +247,7 @@ func (m *Rlopen) Decode(buf *binary.Buffer) {
 	m.Iounit = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlcreate) MessageType() MessageType { return MessageTlcreate }
 
 // String implements fmt.Stringer.
@@ -279,7 +279,7 @@ func (m *Tlcreate) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlcreate) MessageType() MessageType { return MessageRlcreate }
 
 // String implements fmt.Stringer.
@@ -303,7 +303,7 @@ func (m *Rlcreate) Decode(buf *binary.Buffer) {
 	m.Iounit = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tsymlink) MessageType() MessageType { return MessageTsymlink }
 
 // String implements fmt.Stringer.
@@ -333,7 +333,7 @@ func (m *Tsymlink) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rsymlink) MessageType() MessageType { return MessageRsymlink }
 
 // String implements fmt.Stringer.
@@ -355,7 +355,7 @@ func (m *Rsymlink) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tmknod) MessageType() MessageType { return MessageTmknod }
 
 // String implements fmt.Stringer.
@@ -389,7 +389,7 @@ func (m *Tmknod) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rmknod) MessageType() MessageType { return MessageRmknod }
 
 // String implements fmt.Stringer.
@@ -411,7 +411,7 @@ func (m *Rmknod) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Trename) MessageType() MessageType { return MessageTrename }
 
 // String implements fmt.Stringer.
@@ -439,7 +439,7 @@ func (m *Trename) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rrename) MessageType() MessageType { return MessageRrename }
 
 // String implements fmt.Stringer.
@@ -457,7 +457,7 @@ func (m Rrename) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rrename) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Treadlink) MessageType() MessageType { return MessageTreadlink }
 
 // String implements fmt.Stringer.
@@ -479,7 +479,7 @@ func (m *Treadlink) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rreadlink) MessageType() MessageType { return MessageRreadlink }
 
 // String implements fmt.Stringer.
@@ -501,7 +501,7 @@ func (m *Rreadlink) Decode(buf *binary.Buffer) {
 	m.Target = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tgetattr) MessageType() MessageType { return MessageTgetattr }
 
 // String implements fmt.Stringer.
@@ -525,7 +525,7 @@ func (m *Tgetattr) Decode(buf *binary.Buffer) {
 	m.RequestMask = buf.Uint64()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rgetattr) MessageType() MessageType { return MessageRgetattr }
 
 // String implements fmt.Stringer.
@@ -579,7 +579,7 @@ func (m *Rgetattr) Decode(buf *binary.Buffer) {
 	m.DataVersion = buf.Uint64()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tsetattr) MessageType() MessageType { return MessageTsetattr }
 
 // String implements fmt.Stringer.
@@ -617,7 +617,7 @@ func (m *Tsetattr) Decode(buf *binary.Buffer) {
 	m.Mtime = decodeTimespec(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rsetattr) MessageType() MessageType { return MessageRsetattr }
 
 // String implements fmt.Stringer.
@@ -635,7 +635,7 @@ func (m Rsetattr) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rsetattr) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Txattrwalk) MessageType() MessageType { return MessageTxattrwalk }
 
 // String implements fmt.Stringer.
@@ -663,7 +663,7 @@ func (m *Txattrwalk) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rxattrwalk) MessageType() MessageType { return MessageRxattrwalk }
 
 // String implements fmt.Stringer.
@@ -685,7 +685,7 @@ func (m *Rxattrwalk) Decode(buf *binary.Buffer) {
 	m.Size = buf.Uint64()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Txattrcreate) MessageType() MessageType { return MessageTxattrcreate }
 
 // String implements fmt.Stringer.
@@ -715,7 +715,7 @@ func (m *Txattrcreate) Decode(buf *binary.Buffer) {
 	m.Flag = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rxattrcreate) MessageType() MessageType { return MessageRxattrcreate }
 
 // String implements fmt.Stringer.
@@ -733,7 +733,7 @@ func (m Rxattrcreate) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rxattrcreate) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Treaddir) MessageType() MessageType { return MessageTreaddir }
 
 // String implements fmt.Stringer.
@@ -761,7 +761,7 @@ func (m *Treaddir) Decode(buf *binary.Buffer) {
 	m.Count = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tfsync) MessageType() MessageType { return MessageTfsync }
 
 // String implements fmt.Stringer.
@@ -783,7 +783,7 @@ func (m *Tfsync) Decode(buf *binary.Buffer) {
 	m.Fid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rfsync) MessageType() MessageType { return MessageRfsync }
 
 // String implements fmt.Stringer.
@@ -801,7 +801,7 @@ func (m Rfsync) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rfsync) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlock) MessageType() MessageType { return MessageTlock }
 
 // String implements fmt.Stringer.
@@ -837,7 +837,7 @@ func (m *Tlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlock) MessageType() MessageType { return MessageRlock }
 
 // String implements fmt.Stringer.
@@ -859,7 +859,7 @@ func (m *Rlock) Decode(buf *binary.Buffer) {
 	m.Status = buf.Uint8()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tgetlock) MessageType() MessageType { return MessageTgetlock }
 
 // String implements fmt.Stringer.
@@ -893,7 +893,7 @@ func (m *Tgetlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rgetlock) MessageType() MessageType { return MessageRgetlock }
 
 // String implements fmt.Stringer.
@@ -925,7 +925,7 @@ func (m *Rgetlock) Decode(buf *binary.Buffer) {
 	m.ClientID = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tlink) MessageType() MessageType { return MessageTlink }
 
 // String implements fmt.Stringer.
@@ -953,7 +953,7 @@ func (m *Tlink) Decode(buf *binary.Buffer) {
 	m.Name = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rlink) MessageType() MessageType { return MessageRlink }
 
 // String implements fmt.Stringer.
@@ -971,7 +971,7 @@ func (m Rlink) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rlink) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tmkdir) MessageType() MessageType { return MessageTmkdir }
 
 // String implements fmt.Stringer.
@@ -1001,7 +1001,7 @@ func (m *Tmkdir) Decode(buf *binary.Buffer) {
 	m.Gid = buf.Uint32()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rmkdir) MessageType() MessageType { return MessageRmkdir }
 
 // String implements fmt.Stringer.
@@ -1023,7 +1023,7 @@ func (m *Rmkdir) Decode(buf *binary.Buffer) {
 	m.Qid.Decode(buf)
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Trenameat) MessageType() MessageType { return MessageTrenameat }
 
 // String implements fmt.Stringer.
@@ -1053,7 +1053,7 @@ func (m *Trenameat) Decode(buf *binary.Buffer) {
 	m.NewName = buf.String()
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rrenameat) MessageType() MessageType { return MessageRrenameat }
 
 // String implements fmt.Stringer.
@@ -1071,7 +1071,7 @@ func (m Rrenameat) Encode(buf *binary.Buffer) {}
 // Decode decodes from the given binary.Buffer.
 func (m *Rrenameat) Decode(buf *binary.Buffer) {}
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Tunlinkat) MessageType() MessageType { return MessageTunlinkat }
 
 // String implements fmt.Stringer.
@@ -1099,7 +1099,7 @@ func (m *Tunlinkat) Decode(buf *binary.Buffer) {
 	m.Flags = Flag(buf.Uint32())
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Runlinkat) MessageType() MessageType { return MessageRunlinkat }
 
 // String implements fmt.Stringer.

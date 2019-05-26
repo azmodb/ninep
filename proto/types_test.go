@@ -105,19 +105,6 @@ func TestCodec(t *testing.T) {
 	}
 }
 
-func TestRgetattrLen(t *testing.T) {
-	buf := &binary.Buffer{}
-	m := &Rgetattr{}
-
-	m.Encode(buf)
-	if err := buf.Err(); err != nil {
-		t.Fatalf("rgetattr: unexpected encode error: %v", err)
-	}
-	if buf.Len() != m.Len() {
-		t.Fatalf("rgetattr: expected length %d, got %d", buf.Len(), m.Len())
-	}
-}
-
 func TestQidCodec(t *testing.T) {
 	buf := make([]byte, 0, 13)
 	for n, test := range []struct {
@@ -145,7 +132,6 @@ func TestQidCodec(t *testing.T) {
 		if !reflect.DeepEqual(in, out) {
 			t.Errorf("qid(%d): qid differ\n%v\n%v", n, in, out)
 		}
-
 	}
 }
 
@@ -182,6 +168,5 @@ func TestDirentCodec(t *testing.T) {
 		if !reflect.DeepEqual(in, out) {
 			t.Errorf("dirent(%d): dirent differ\n%v\n%v", n, in, out)
 		}
-
 	}
 }

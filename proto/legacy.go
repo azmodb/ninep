@@ -71,7 +71,7 @@ type Twalk struct {
 	Names []string
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Twalk) MessageType() MessageType { return MessageTwalk }
 
 // String implements fmt.Stringer.
@@ -124,7 +124,7 @@ func (m *Twalk) Decode(buf *binary.Buffer) {
 // an Rerror message is returned instead.
 type Rwalk []Qid
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rwalk) MessageType() MessageType { return MessageRwalk }
 
 // String implements fmt.Stringer.
@@ -195,7 +195,7 @@ type Rread struct {
 	Data []byte
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rread) MessageType() MessageType { return MessageRread }
 
 // String implements fmt.Stringer.
@@ -231,7 +231,7 @@ type Twrite struct {
 	Data   []byte
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Twrite) MessageType() MessageType { return MessageTwrite }
 
 // String implements fmt.Stringer.

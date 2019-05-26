@@ -123,7 +123,7 @@ func (g *Generator) print(format string, args ...interface{}) {
 }
 
 func (g *Generator) genStructType(s Struct) {
-	g.print("// Type returns the message type.")
+	g.print("// MessageType returns the message type.")
 	g.print("func (m %s) MessageType() MessageType { return Message%s }",
 		s.Name, s.Name,
 	)
