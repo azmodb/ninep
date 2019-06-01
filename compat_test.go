@@ -5,7 +5,6 @@ package ninep
 import (
 	"context"
 	"math"
-	"os"
 	"testing"
 )
 
@@ -33,6 +32,7 @@ func attach(t *testing.T, c *Client, path string) *Fid {
 	return f
 }
 
+/*
 func TestCompatHandshake(t *testing.T) {
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
 	if err != nil {
@@ -69,8 +69,14 @@ func TestAttach(t *testing.T) {
 			t.Fatalf("clunk: %v", err)
 		}
 	}()
-}
 
+	if !f.fi.IsDir() {
+		t.Fatalf("attach: expected directory, got %q", f.fi.Qid)
+	}
+}
+*/
+
+/*
 func TestCreateRemove(t *testing.T) {
 	t.Parallel()
 
@@ -91,20 +97,18 @@ func TestCreateRemove(t *testing.T) {
 		t.Fatalf("remove: %v", err)
 	}
 }
+*/
 
-/*
 func TestWalk(t *testing.T) {
 	t.Parallel()
 
 	c := newCompatTestClient(t)
 	defer c.Close()
 
-	//names := []string{"dir1", "sub1", "subsub1", "file1"}
-	names := []string{"dir1"}
 	f := attach(t, c, "/tmp/dir-test")
 	defer f.Close()
 
-	dir1, err := f.Walk(names...)
+	dir1, err := f.Walk("dir1")
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
@@ -116,19 +120,27 @@ func TestWalk(t *testing.T) {
 	}
 	defer sub1.Close()
 
-	//	if err = dir1.Open(os.O_RDONLY); err != nil {
-	//		t.Fatalf("open: %v", err)
-	//	}
-
-	entries, err := dir1.ReadDir(-1)
+	subsub1, err := sub1.Walk("subsub1")
 	if err != nil {
-		t.Fatalf("stat: %v", err)
+		t.Fatalf("walk: %v", err)
 	}
-	for _, ent := range entries {
-		fmt.Println("\t", ent.Name())
-	}
+	defer subsub1.Close()
+
+	/*
+		//	if err = dir1.Open(os.O_RDONLY); err != nil {
+		//		t.Fatalf("open: %v", err)
+		//	}
+			entries, err := dir1.ReadDir(-1)
+			if err != nil {
+				t.Fatalf("stat: %v", err)
+			}
+			for _, ent := range entries {
+				fmt.Println("\t", ent.Name())
+			}
+	*/
 }
 
+/*
 // func TestCompatMkdirRemove(t *testing.T) {
 // 	t.Parallel()
 

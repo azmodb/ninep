@@ -94,7 +94,6 @@ func (f *Fid) Stat() (os.FileInfo, error) {
 	return fi, nil
 }
 
-/*
 func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 	if len(names) > proto.MaxNames {
 		return 0, nil, unix.EINVAL
@@ -105,8 +104,12 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, errFidOverflow
 	}
 
-	tx := &proto.Twalk{Fid: f.num, NewFid: uint32(fidnum), Names: names}
-	rx := &proto.Rwalk{}
+	tx, rx := proto.AllocTwalk(), proto.AllocRwalk()
+	defer proto.Release(tx, rx)
+
+	tx.Fid = f.num
+	tx.NewFid = uint32(fidnum)
+	tx.Names = names
 	if err := f.c.rpc(tx, rx); err != nil {
 		return 0, nil, err
 	}
@@ -114,7 +117,7 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, unix.ENOENT
 	}
 
-	attr, err := stat(f.c, tx.NewFid, proto.GetAttrBasic)
+	attr, err := f.c.stat(tx.NewFid, proto.GetAttrBasic)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -144,6 +147,7 @@ func (f *Fid) clone() (*Fid, error) {
 	return &Fid{c: f.c, num: fidnum, fi: fi}, nil
 }
 
+/*
 func (f *Fid) parse(data []byte) ([]proto.Dirent, uint64, error) {
 	var ents []proto.Dirent
 	var offset uint64
