@@ -122,6 +122,7 @@ func TestCreateRemove(t *testing.T) {
 	}
 }
 
+/*
 func TestWalk(t *testing.T) {
 	t.Parallel()
 
@@ -152,3 +153,4 @@ func TestWalk(t *testing.T) {
 	defer file1.Close()
 	checkFidIsFile(t, file1)
 }
+*/
