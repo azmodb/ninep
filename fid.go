@@ -71,15 +71,11 @@ func (f *Fid) clunk() error {
 	f.opened = false
 	f.closing = true
 
-	tx, rx := &proto.Tclunk{Fid: f.num}, &proto.Rclunk{}
-	return f.c.rpc(tx, rx)
-}
-
-func stat(c *Client, num uint32, mask uint64) (*proto.Rgetattr, error) {
-	tx := &proto.Tgetattr{Fid: num, RequestMask: mask}
-	rx := &proto.Rgetattr{}
-	err := c.rpc(tx, rx)
-	return rx, err
+	tx := proto.AllocTclunk()
+	tx.Fid = f.num
+	err := f.c.rpc(tx, nil)
+	proto.Release(tx)
+	return err
 }
 
 // Stat returns information about a file represented by fid. Execute
@@ -87,18 +83,18 @@ func stat(c *Client, num uint32, mask uint64) (*proto.Rgetattr, error) {
 // that lead to the file.
 func (f *Fid) Stat() (os.FileInfo, error) {
 	f.mu.Lock()
-	attr, err := stat(f.c, f.num, proto.GetAttrBasic)
+	attr, err := f.c.stat(f.num, proto.GetAttrBasic)
 	if err != nil {
 		f.mu.Unlock()
 		return nil, err
 	}
-	f.fi.Rgetattr = attr.Copy()
 
 	fi := fileInfo{Rgetattr: attr, path: f.fi.path, iounit: f.fi.iounit}
 	f.mu.Unlock()
 	return fi, nil
 }
 
+/*
 func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 	if len(names) > proto.MaxNames {
 		return 0, nil, unix.EINVAL
@@ -226,6 +222,7 @@ func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
 	f.mu.Unlock()
 	return info, err
 }
+*/
 
 // Create asks the file server to create a new file with the name
 // supplied, in the directory represented by fid, and requires write
@@ -245,14 +242,14 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 }
 
 func (f *Fid) create(name string, flag int, perm os.FileMode) error {
-	tx := &proto.Tlcreate{
-		Fid:   f.num,
-		Name:  name,
-		Flags: proto.NewFlag(flag),
-		Perm:  proto.NewMode(perm),
-		Gid:   f.fi.Gid,
-	}
-	rx := &proto.Rlcreate{}
+	tx, rx := proto.AllocTlcreate(), proto.AllocRlcreate()
+	defer proto.Release(tx, rx)
+
+	tx.Fid = f.num
+	tx.Name = name
+	tx.Flags = proto.NewFlag(flag)
+	tx.Perm = proto.NewMode(perm)
+	tx.Gid = f.fi.Gid
 	if err := f.c.rpc(tx, rx); err != nil {
 		return err
 	}
@@ -277,14 +274,14 @@ func (f *Fid) mkdir(name string, perm os.FileMode) error {
 		return errInvalildName
 	}
 
-	tx := &proto.Tmkdir{
-		DirectoryFid: f.num,
-		Name:         name,
-		Perm:         proto.NewMode(perm),
-		Gid:          f.fi.Gid,
-	}
-	rx := &proto.Rmkdir{}
-	return f.c.rpc(tx, rx)
+	tx := proto.AllocTmkdir()
+	tx.DirectoryFid = f.num
+	tx.Name = name
+	tx.Perm = proto.NewMode(perm)
+	tx.Gid = f.fi.Gid
+	err := f.c.rpc(tx, nil)
+	proto.Release(tx)
+	return err
 }
 
 // Open opens the file represented by fid with specified flag
@@ -301,8 +298,11 @@ func (f *Fid) open(flag int) error {
 		return errFidOpened
 	}
 
-	tx := &proto.Tlopen{Fid: f.num, Flags: proto.NewFlag(flag)}
-	rx := &proto.Rlopen{}
+	tx, rx := proto.AllocTlopen(), proto.AllocRlopen()
+	defer proto.Release(tx, rx)
+
+	tx.Fid = f.num
+	tx.Flags = proto.NewFlag(flag)
 	if err := f.c.rpc(tx, rx); err != nil {
 		return err
 	}
@@ -333,8 +333,12 @@ func (f *Fid) remove() error {
 
 	f.opened = false
 	f.closing = true
-	tx, rx := &proto.Tremove{Fid: f.num}, &proto.Rremove{}
-	return f.c.rpc(tx, rx)
+
+	tx := proto.AllocTremove()
+	tx.Fid = f.num
+	err := f.c.rpc(tx, nil)
+	proto.Release(tx)
+	return err
 }
 
 func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
