@@ -245,12 +245,6 @@ type Rgetattr struct {
 	DataVersion uint64
 }
 
-func (m *Rgetattr) Copy() *Rgetattr {
-	var n *Rgetattr
-	*n = *m
-	return n
-}
-
 // Tsetattr sets attributes of a file system object referenced by fid.
 type Tsetattr struct {
 	Fid uint32
@@ -346,7 +340,7 @@ type Rreaddir struct {
 	Data []byte
 }
 
-// Type returns the message type.
+// MessageType returns the message type.
 func (m Rreaddir) MessageType() MessageType { return MessageRreaddir }
 
 // String implements fmt.Stringer.
