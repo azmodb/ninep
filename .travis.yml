@@ -3,12 +3,12 @@ language: go
 go:
   - 1.12.x
 
-#services:
-#   - docker
-#before_install:
-#   - bash scripts/docker-diod.bash
-#script:
-#   - go test -tags=compat -v ./...
-
+services:
+   - docker
+before_install:
+   - bash scripts/docker-diod.bash
 script:
-    - go test -v ./...
+   - go test -tags=compat -v ./...
+
+#script:
+    #- go test -v ./...
