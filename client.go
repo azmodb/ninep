@@ -209,7 +209,11 @@ func (c *Client) recv() (err error) {
 		default:
 			err = c.dec.Decode(f.Rx)
 			f.done(err)
-			log.Debugf("-> %s tag:%d %s", mtype, tag, f.Rx)
+			if f.Rx == nil {
+				log.Debugf("-> %s tag:%d", mtype, tag)
+			} else {
+				log.Debugf("-> %s tag:%d %s", mtype, tag, f.Rx)
+			}
 		}
 	}
 
@@ -234,8 +238,11 @@ func (c *Client) recv() (err error) {
 }
 
 func (c *Client) handshake() error {
-	tx := &proto.Tversion{MessageSize: c.maxMessageSize, Version: proto.Version}
-	rx := &proto.Rversion{}
+	tx, rx := proto.AllocTversion(), proto.AllocRversion()
+	defer proto.Release(tx, rx)
+
+	tx.MessageSize = c.maxMessageSize
+	tx.Version = proto.Version
 	if err := c.rpc(tx, rx); err != nil {
 		return err
 	}
@@ -282,19 +289,19 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		authnum = auth.Num()
 	}
 
-	tx := &proto.Tlattach{
-		AuthFid:  authnum,
-		Fid:      uint32(fidnum),
-		Path:     export,
-		UserName: username,
-		Uid:      uint32(uid),
-	}
-	rx := &proto.Rlattach{}
-	if err := c.rpc(tx, rx); err != nil {
+	tx := proto.AllocTlattach()
+	defer proto.Release(tx)
+
+	tx.AuthFid = authnum
+	tx.Fid = uint32(fidnum)
+	tx.Path = export
+	tx.UserName = username
+	tx.Uid = uint32(uid)
+	if err := c.rpc(tx, nil); err != nil {
 		return nil, err
 	}
 
-	attr, err := stat(c, tx.Fid, proto.GetAttrBasic)
+	attr, err := c.stat(tx.Fid, proto.GetAttrBasic)
 	if err != nil {
 		return nil, err
 	}
@@ -303,4 +310,19 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 	fid.fi.Rgetattr = attr
 	fid.fi.iounit = 0
 	return fid, nil
+}
+
+func (c *Client) stat(num uint32, mask uint64) (*proto.Rgetattr, error) {
+	tx, rx := proto.AllocTgetattr(), proto.AllocRgetattr()
+
+	tx.Fid = num
+	tx.RequestMask = mask
+	if err := c.rpc(tx, rx); err != nil {
+		proto.Release(tx, rx)
+		return nil, err
+	}
+
+	attr := *rx
+	proto.Release(tx, rx)
+	return &attr, nil
 }

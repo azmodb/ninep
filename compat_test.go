@@ -4,8 +4,8 @@ package ninep
 
 import (
 	"context"
-	"fmt"
 	"math"
+	"os"
 	"testing"
 )
 
@@ -33,7 +33,6 @@ func attach(t *testing.T, c *Client, path string) *Fid {
 	return f
 }
 
-/*
 func TestCompatHandshake(t *testing.T) {
 	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
 	if err != nil {
@@ -92,8 +91,8 @@ func TestCreateRemove(t *testing.T) {
 		t.Fatalf("remove: %v", err)
 	}
 }
-*/
 
+/*
 func TestWalk(t *testing.T) {
 	t.Parallel()
 
@@ -150,3 +149,4 @@ func TestWalk(t *testing.T) {
 // 	// 	t.Fatalf("compat remove: %v", err)
 // 	// }
 // }
+*/
