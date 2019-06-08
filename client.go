@@ -163,13 +163,6 @@ func (c *Client) rpc(f *proto.Fcall) error {
 	return f.Err
 }
 
-// Send manages the transmission of type and data information to the
-// other side of a connection. The C channel will signal when the call
-// is complete by returning the same Fcall object.
-func (c *Client) Send(ctx context.Context, fcall *proto.Fcall) {
-	c.send(fcall)
-}
-
 func (c *Client) recv() (err error) {
 	rlerror := proto.Rlerror{}
 
