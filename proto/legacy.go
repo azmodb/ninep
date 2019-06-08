@@ -3,6 +3,7 @@ package proto
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/azmodb/ninep/binary"
 )
@@ -126,6 +127,20 @@ type Rwalk []Qid
 
 // MessageType returns the message type.
 func (m Rwalk) MessageType() MessageType { return MessageRwalk }
+
+var rwalkPool = sync.Pool{
+	New: func() interface{} { return &Rwalk{} },
+}
+
+// AllocRwalk selects an arbitrary item from the Rwalk Pool removes it,
+// and returns it to the caller.
+func AllocRwalk() *Rwalk { return rwalkPool.Get().(*Rwalk) }
+
+// Release resets all state and adds m to the Rwalk pool.
+func (m *Rwalk) Release() {
+	m.Reset()
+	rwalkPool.Put(m)
+}
 
 // String implements fmt.Stringer.
 func (m Rwalk) String() string {

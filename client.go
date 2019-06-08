@@ -31,7 +31,7 @@ type Client struct {
 	maxDataSize    uint32
 
 	mu       sync.Mutex // protects following
-	pending  map[uint16]*Fcall
+	pending  map[uint16]*proto.Fcall
 	closing  bool
 	shutdown bool
 }
@@ -57,12 +57,26 @@ func Dial(ctx context.Context, network, address string, opts ...Option) (*Client
 // NewClient returns a new client to handle requests to the set of
 // services at the other end of the connection.
 func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
+	c, err := newClient(rwc, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handshake(); err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func newClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 	c := &Client{
 		maxMessageSize: proto.DefaultMaxMessageSize,
 		maxDataSize:    proto.DefaultMaxDataSize,
 		c:              rwc,
 
-		pending: make(map[uint16]*Fcall),
+		pending: make(map[uint16]*proto.Fcall),
 		tag:     pool.NewGenerator(1, math.MaxUint16),
 		fid:     pool.NewGenerator(1, math.MaxUint32),
 	}
@@ -75,44 +89,23 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 	c.dec = proto.NewDecoder(rwc, c.maxMessageSize)
 
 	go c.recv()
-
-	if err := c.handshake(); err != nil {
-		c.Close()
-		return nil, err
-	}
-
 	return c, nil
 }
 
-// Fcall represents an active 9P RPC.
-type Fcall struct {
-	// The argument to the 9P function and used to determine the message
-	// type.
-	Tx proto.Message
-
-	Rx proto.Message // The reply from the function.
-
-	err error
-	ch  chan<- *Fcall
-}
-
-func (f *Fcall) done(err error) {
-	if f == nil {
+func done(f *proto.Fcall, err error) {
+	if f == nil || f.C == nil {
 		return
 	}
 
-	if f.err == nil && err != nil {
-		f.err = err
+	if f.Err == nil && err != nil {
+		f.Err = err
 	}
 
 	select {
-	case f.ch <- f:
+	case f.C <- f:
 	default: // do not block here
 	}
 }
-
-// Err returns the first error that was encountered by the Fcall.
-func (f *Fcall) Err() error { return f.err }
 
 const (
 	errConnectionShutdown = proto.Error("connection is shut down")
@@ -135,17 +128,17 @@ func (c *Client) Close() error {
 	return c.c.Close()
 }
 
-func (c *Client) send(f *Fcall) {
+func (c *Client) send(f *proto.Fcall) {
 	c.mu.Lock()
 	if c.shutdown || c.closing {
 		c.mu.Unlock()
-		f.done(errConnectionShutdown)
+		done(f, errConnectionShutdown)
 		return
 	}
 	v, ok := c.tag.Get()
 	if !ok {
 		c.mu.Unlock()
-		f.done(errTagOverflow)
+		done(f, errTagOverflow)
 	}
 	tag := uint16(v)
 	c.pending[tag] = f
@@ -158,21 +151,22 @@ func (c *Client) send(f *Fcall) {
 		delete(c.pending, tag)
 		c.tag.Put(int64(tag))
 		c.mu.Unlock()
-		f.done(err)
+		done(f, err)
 	}
 	c.writer.Unlock()
 }
 
-func (c *Client) rpc(tx, rx proto.Message) error {
-	ch := make(chan *Fcall, 1)
-	f := &Fcall{Tx: tx, Rx: rx, ch: ch}
+func (c *Client) rpc(f *proto.Fcall) error {
+	f.C = make(chan *proto.Fcall, 1)
 	go c.send(f)
-	f = <-ch
-	return f.err
+	f = <-f.C
+	return f.Err
 }
 
-func (c *Client) Do(ctx context.Context, fcall *Fcall, ch chan<- *Fcall) {
-	fcall.ch = ch
+// Send manages the transmission of type and data information to the
+// other side of a connection. The C channel will signal when the call
+// is complete by returning the same Fcall object.
+func (c *Client) Send(ctx context.Context, fcall *proto.Fcall) {
 	c.send(fcall)
 }
 
@@ -201,14 +195,14 @@ func (c *Client) recv() (err error) {
 		case mtype == proto.MessageRlerror:
 			rlerror = proto.Rlerror{}
 			if err = c.dec.Decode(&rlerror); err != nil {
-				f.done(err)
+				done(f, err)
 			} else {
-				f.done(unix.Errno(rlerror.Errno))
+				done(f, unix.Errno(rlerror.Errno))
 			}
 			log.Debugf("-> %s tag:%d %s", mtype, tag, rlerror)
 		default:
 			err = c.dec.Decode(f.Rx)
-			f.done(err)
+			done(f, err)
 			if f.Rx == nil {
 				log.Debugf("-> %s tag:%d", mtype, tag)
 			} else {
@@ -230,22 +224,33 @@ func (c *Client) recv() (err error) {
 	for tag, f := range c.pending {
 		delete(c.pending, tag)
 		c.tag.Put(int64(tag))
-		f.done(err)
+		done(f, err)
 	}
 	c.mu.Unlock()
 	c.writer.Unlock()
 	return err
 }
 
-func (c *Client) handshake() error {
-	tx, rx := proto.AllocTversion(), proto.AllocRversion()
-	defer proto.Release(tx, rx)
+func mustAlloc(mtype proto.MessageType) *proto.Fcall {
+	f, ok := proto.Alloc(mtype)
+	if !ok {
+		log.Panicf("cannot alloc %q transaction", mtype)
+	}
+	return f
+}
 
+func (c *Client) handshake() error {
+	f := mustAlloc(proto.MessageTversion)
+	defer proto.Release(f)
+
+	tx := f.Tx.(*proto.Tversion)
 	tx.MessageSize = c.maxMessageSize
 	tx.Version = proto.Version
-	if err := c.rpc(tx, rx); err != nil {
+	if err := c.rpc(f); err != nil {
 		return err
 	}
+
+	rx := f.Rx.(*proto.Rversion)
 	if rx.Version != tx.Version {
 		return errVersionNotSupported
 	}
@@ -289,15 +294,16 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		authnum = auth.Num()
 	}
 
-	tx := proto.AllocTlattach()
-	defer proto.Release(tx)
+	f := mustAlloc(proto.MessageTattach)
+	defer proto.Release(f)
 
+	tx := f.Tx.(*proto.Tlattach)
 	tx.AuthFid = authnum
 	tx.Fid = uint32(fidnum)
 	tx.Path = export
 	tx.UserName = username
 	tx.Uid = uint32(uid)
-	if err := c.rpc(tx, nil); err != nil {
+	if err := c.rpc(f); err != nil {
 		return nil, err
 	}
 
@@ -313,16 +319,16 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 }
 
 func (c *Client) stat(num uint32, mask uint64) (*proto.Rgetattr, error) {
-	tx, rx := proto.AllocTgetattr(), proto.AllocRgetattr()
+	f := mustAlloc(proto.MessageTgetattr)
+	defer proto.Release(f)
 
+	tx := f.Tx.(*proto.Tgetattr)
 	tx.Fid = num
 	tx.RequestMask = mask
-	if err := c.rpc(tx, rx); err != nil {
-		proto.Release(tx, rx)
+	if err := c.rpc(f); err != nil {
 		return nil, err
 	}
 
-	attr := *rx
-	proto.Release(tx, rx)
+	attr := *f.Rx.(*proto.Rgetattr)
 	return &attr, nil
 }

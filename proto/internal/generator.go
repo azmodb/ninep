@@ -380,9 +380,13 @@ func (g *Generator) GeneratePool(w io.Writer, srcs ...string) error {
 	g.print("// EDIT legacy.go, linux.go INSTEAD.\n")
 
 	g.print("package %s\n", g.pkgname)
-	g.print(`import "sync"` + "\n")
+	g.print(`import (
+			"sync"
 
-	buf := &bytes.Buffer{}
+			"github.com/azmodb/pkg/pool"
+		)` + "\n")
+
+	g.print("var allocator = pool.Map{")
 	for _, src := range srcs {
 		r, err := os.Open(src)
 		if err != nil {
@@ -396,32 +400,23 @@ func (g *Generator) GeneratePool(w io.Writer, srcs ...string) error {
 		}
 
 		for _, s := range structs {
-			g.print("var %sPool = sync.Pool{", strings.ToLower(s.Name))
-			g.print("	New: func() interface{} { return &%s{} },", s.Name)
-			g.print("}\n")
+			if s.Name[0] == 'R' {
+				continue
+			}
 
-			g.print("// Alloc%s selects an arbitrary item from the %s Pool", s.Name, s.Name)
-			g.print("// removes it, and returns it to the caller.")
-			g.print("func Alloc%s() *%s {", s.Name, s.Name)
-			g.print("	return %sPool.Get().(*%s)", strings.ToLower(s.Name), s.Name)
-			g.print("}\n")
-
-			g.print("// Release resets all state and adds m to the %s pool.", s.Name)
-			g.print("func (m *%s) Release() {", s.Name)
-			g.print("	m.Reset()")
-			g.print("	%sPool.Put(m)", strings.ToLower(s.Name))
-			g.print("}\n")
-		}
-
-		if _, err = io.Copy(buf, g.buf); err != nil {
-			return err
+			g.print("Message%s: &sync.Pool{New: func() interface{} {", s.Name)
+			g.print("	return &Fcall{Tx: &%s{}, Rx: &R%s{}}", s.Name, s.Name[1:])
+			g.print("}},")
 		}
 	}
+	g.print("}")
 
-	data, err := format.Source(buf.Bytes())
+	data, err := format.Source(g.buf.Bytes())
+	g.buf.Reset()
 	if err != nil {
 		panic(err)
 	}
+
 	_, err = w.Write(data)
 	return err
 }

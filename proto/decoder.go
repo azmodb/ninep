@@ -100,6 +100,7 @@ func (d *Decoder) decMessage(size int, m Message) error {
 	}
 
 	if m == nil {
+		d.buf.Reset()
 		return d.err
 	}
 

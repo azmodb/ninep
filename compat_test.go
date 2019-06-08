@@ -4,6 +4,8 @@ package ninep
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"math"
 	"os"
 	"testing"
@@ -26,11 +28,37 @@ func newCompatTestClient(t *testing.T) *Client {
 }
 
 func attach(t *testing.T, c *Client, path string) *Fid {
+	t.Helper()
+
 	f, err := c.Attach(nil, path, "root", math.MaxUint32)
 	if err != nil {
 		t.Fatalf("attach: %v", err)
 	}
 	return f
+}
+
+func random() string {
+	data := make([]byte, 16)
+	if _, err := rand.Reader.Read(data); err != nil {
+		panic("out of entropy")
+	}
+	return fmt.Sprintf("%x", data)
+}
+
+func checkFidIsDir(t *testing.T, f *Fid) {
+	t.Helper()
+
+	if !f.fi.IsDir() {
+		t.Fatalf("fid: expected directory fid, got %q", f.fi.Qid)
+	}
+}
+
+func checkFidIsFile(t *testing.T, f *Fid) {
+	t.Helper()
+
+	if f.fi.IsDir() {
+		t.Fatalf("fid: expected file fid, got %q", f.fi.Qid)
+	}
 }
 
 func TestCompatHandshake(t *testing.T) {
@@ -69,6 +97,8 @@ func TestAttach(t *testing.T) {
 			t.Fatalf("clunk: %v", err)
 		}
 	}()
+
+	checkFidIsDir(t, f)
 }
 
 func TestCreateRemove(t *testing.T) {
@@ -83,7 +113,7 @@ func TestCreateRemove(t *testing.T) {
 	}
 	defer f.Close()
 
-	if err = f.Create("create_remove_test", os.O_RDONLY, 0644); err != nil {
+	if err = f.Create(random(), os.O_RDONLY, 0644); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
@@ -99,54 +129,28 @@ func TestWalk(t *testing.T) {
 	c := newCompatTestClient(t)
 	defer c.Close()
 
-	//names := []string{"dir1", "sub1", "subsub1", "file1"}
-	names := []string{"dir1"}
 	f := attach(t, c, "/tmp/dir-test")
 	defer f.Close()
 
-	dir1, err := f.Walk(names...)
+	dir1, err := f.Walk("dir1")
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
 	defer dir1.Close()
+	checkFidIsDir(t, dir1)
 
 	sub1, err := dir1.Walk("sub1")
 	if err != nil {
 		t.Fatalf("walk: %v", err)
 	}
 	defer sub1.Close()
+	checkFidIsDir(t, sub1)
 
-	//	if err = dir1.Open(os.O_RDONLY); err != nil {
-	//		t.Fatalf("open: %v", err)
-	//	}
-
-	entries, err := dir1.ReadDir(-1)
+	file1, err := sub1.Walk("subsub1", "file1")
 	if err != nil {
-		t.Fatalf("stat: %v", err)
+		t.Fatalf("walk: %v", err)
 	}
-	for _, ent := range entries {
-		fmt.Println("\t", ent.Name())
-	}
+	defer file1.Close()
+	checkFidIsFile(t, file1)
 }
-
-// func TestCompatMkdirRemove(t *testing.T) {
-// 	t.Parallel()
-
-// 	c := newCompatTestClient(t)
-// 	defer c.Close()
-
-// 	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
-// 	if err != nil {
-// 		t.Fatalf("compat attach: %v", err)
-// 	}
-// 	defer f.Close()
-
-// 	if err = f.Mkdir("mkdir_remove_test", 0755); err != nil {
-// 		t.Fatalf("compat mkdir: %v", err)
-// 	}
-
-// 	// if err = f.Remove(); err != nil {
-// 	// 	t.Fatalf("compat remove: %v", err)
-// 	// }
-// }
 */

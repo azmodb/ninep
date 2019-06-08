@@ -71,10 +71,11 @@ func (f *Fid) clunk() error {
 	f.opened = false
 	f.closing = true
 
-	tx := proto.AllocTclunk()
+	fcall := mustAlloc(proto.MessageTclunk)
+	tx := fcall.Tx.(*proto.Tclunk)
 	tx.Fid = f.num
-	err := f.c.rpc(tx, nil)
-	proto.Release(tx)
+	err := f.c.rpc(fcall)
+	proto.Release(fcall)
 	return err
 }
 
@@ -94,7 +95,6 @@ func (f *Fid) Stat() (os.FileInfo, error) {
 	return fi, nil
 }
 
-/*
 func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 	if len(names) > proto.MaxNames {
 		return 0, nil, unix.EINVAL
@@ -105,16 +105,22 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, errFidOverflow
 	}
 
-	tx := &proto.Twalk{Fid: f.num, NewFid: uint32(fidnum), Names: names}
-	rx := &proto.Rwalk{}
-	if err := f.c.rpc(tx, rx); err != nil {
+	fcall := mustAlloc(proto.MessageTwalk)
+	defer proto.Release(fcall)
+
+	tx := fcall.Tx.(*proto.Twalk)
+	tx.Fid = f.num
+	tx.NewFid = uint32(fidnum)
+	tx.Names = names
+	if err := f.c.rpc(fcall); err != nil {
 		return 0, nil, err
 	}
+	rx := fcall.Rx.(*proto.Rwalk)
 	if len(*rx) != len(names) {
 		return 0, nil, unix.ENOENT
 	}
 
-	attr, err := stat(f.c, tx.NewFid, proto.GetAttrBasic)
+	attr, err := f.c.stat(tx.NewFid, proto.GetAttrBasic)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -144,6 +150,7 @@ func (f *Fid) clone() (*Fid, error) {
 	return &Fid{c: f.c, num: fidnum, fi: fi}, nil
 }
 
+/*
 func (f *Fid) parse(data []byte) ([]proto.Dirent, uint64, error) {
 	var ents []proto.Dirent
 	var offset uint64
@@ -242,18 +249,20 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 }
 
 func (f *Fid) create(name string, flag int, perm os.FileMode) error {
-	tx, rx := proto.AllocTlcreate(), proto.AllocRlcreate()
-	defer proto.Release(tx, rx)
+	fcall := mustAlloc(proto.MessageTlcreate)
+	defer proto.Release(fcall)
 
+	tx := fcall.Tx.(*proto.Tlcreate)
 	tx.Fid = f.num
 	tx.Name = name
 	tx.Flags = proto.NewFlag(flag)
 	tx.Perm = proto.NewMode(perm)
 	tx.Gid = f.fi.Gid
-	if err := f.c.rpc(tx, rx); err != nil {
+	if err := f.c.rpc(fcall); err != nil {
 		return err
 	}
 
+	rx := fcall.Rx.(*proto.Rlcreate)
 	f.fi.iounit = rx.Iounit
 	f.opened = true
 	return nil
@@ -274,13 +283,14 @@ func (f *Fid) mkdir(name string, perm os.FileMode) error {
 		return errInvalildName
 	}
 
-	tx := proto.AllocTmkdir()
+	fcall := mustAlloc(proto.MessageTmkdir)
+	tx := fcall.Tx.(*proto.Tmkdir)
 	tx.DirectoryFid = f.num
 	tx.Name = name
 	tx.Perm = proto.NewMode(perm)
 	tx.Gid = f.fi.Gid
-	err := f.c.rpc(tx, nil)
-	proto.Release(tx)
+	err := f.c.rpc(fcall)
+	proto.Release(fcall)
 	return err
 }
 
@@ -298,15 +308,17 @@ func (f *Fid) open(flag int) error {
 		return errFidOpened
 	}
 
-	tx, rx := proto.AllocTlopen(), proto.AllocRlopen()
-	defer proto.Release(tx, rx)
+	fcall := mustAlloc(proto.MessageTlopen)
+	defer proto.Release(fcall)
 
+	tx := fcall.Tx.(*proto.Tlopen)
 	tx.Fid = f.num
 	tx.Flags = proto.NewFlag(flag)
-	if err := f.c.rpc(tx, rx); err != nil {
+	if err := f.c.rpc(fcall); err != nil {
 		return err
 	}
 
+	rx := fcall.Rx.(*proto.Rlopen)
 	f.fi.iounit = rx.Iounit
 	f.opened = true
 	return nil
@@ -334,10 +346,11 @@ func (f *Fid) remove() error {
 	f.opened = false
 	f.closing = true
 
-	tx := proto.AllocTremove()
+	fcall := mustAlloc(proto.MessageTremove)
+	tx := fcall.Tx.(*proto.Tremove)
 	tx.Fid = f.num
-	err := f.c.rpc(tx, nil)
-	proto.Release(tx)
+	err := f.c.rpc(fcall)
+	proto.Release(fcall)
 	return err
 }
 

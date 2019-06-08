@@ -116,15 +116,3 @@ type Payloader interface {
 	// count-delimited payload.
 	FixedLen() int
 }
-
-// Releaser is the interface that wraps the basic Release method.
-type Releaser interface {
-	Release()
-}
-
-// Release resets all state and adds all Releaser to their pool.
-func Release(rs ...Releaser) {
-	for _, r := range rs {
-		r.Release()
-	}
-}
