@@ -57,6 +57,20 @@ func Dial(ctx context.Context, network, address string, opts ...Option) (*Client
 // NewClient returns a new client to handle requests to the set of
 // services at the other end of the connection.
 func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
+	c, err := newClient(rwc, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handshake(); err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func newClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 	c := &Client{
 		maxMessageSize: proto.DefaultMaxMessageSize,
 		maxDataSize:    proto.DefaultMaxDataSize,
@@ -75,12 +89,6 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 	c.dec = proto.NewDecoder(rwc, c.maxMessageSize)
 
 	go c.recv()
-
-	if err := c.handshake(); err != nil {
-		c.Close()
-		return nil, err
-	}
-
 	return c, nil
 }
 
