@@ -62,7 +62,7 @@ func NewClient(rwc io.ReadWriteCloser, opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	if err := c.handshake(); err != nil {
+	if err := c.handshake(proto.Version); err != nil {
 		c.Close()
 		return nil, err
 	}
@@ -232,13 +232,13 @@ func mustAlloc(mtype proto.MessageType) *proto.Fcall {
 	return f
 }
 
-func (c *Client) handshake() error {
+func (c *Client) handshake(version string) error {
 	f := mustAlloc(proto.MessageTversion)
 	defer proto.Release(f)
 
 	tx := f.Tx.(*proto.Tversion)
 	tx.MessageSize = c.maxMessageSize
-	tx.Version = proto.Version
+	tx.Version = version
 	if err := c.rpc(f); err != nil {
 		return err
 	}

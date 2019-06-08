@@ -27,7 +27,7 @@ func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	c.maxMessageSize = msize
 	c.maxDataSize = calcMaxDataSize(msize)
 
-	if err := c.handshake(); err != nil {
+	if err := c.handshake(proto.Version); err != nil {
 		t.Errorf("client: handshake failed: %v", err)
 	}
 
@@ -57,6 +57,26 @@ func TestSessionHandshake(t *testing.T) {
 	} {
 		testSessionHandshake(t, num, test.msize, test.want)
 	}
+}
+
+func TestSessionHandshakeVersion(t *testing.T) {
+	server, client := net.Pipe()
+
+	s := newSession(server, 8192, calcMaxDataSize(8192))
+	go s.serve()
+
+	c, err := newClient(client)
+	if err != nil {
+		t.Fatalf("client: cannot initialize connection: %v", err)
+	}
+
+	err = c.handshake("MALFORMED")
+	if err != errVersionNotSupported {
+		t.Errorf("client: handshake unexpected error: %v", err)
+	}
+
+	c.Close()
+	s.Close()
 }
 
 func calcMaxDataSize(msize uint32) uint32 {

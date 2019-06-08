@@ -176,6 +176,7 @@ func (s *session) handshake() error {
 
 func (s *session) serve() (err error) {
 	if err := s.handshake(); err != nil {
+		close(s.donec)
 		return err
 	}
 
