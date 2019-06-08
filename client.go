@@ -223,16 +223,16 @@ func (c *Client) recv() (err error) {
 	return err
 }
 
-func (c *Client) mustAlloc(mtype proto.MessageType) *proto.Fcall {
+func mustAlloc(mtype proto.MessageType) *proto.Fcall {
 	f, ok := proto.Alloc(mtype)
 	if !ok {
-		log.Panicf("client: cannot alloc %q transaction", mtype)
+		log.Panicf("cannot alloc %q transaction", mtype)
 	}
 	return f
 }
 
 func (c *Client) handshake() error {
-	f := c.mustAlloc(proto.MessageTversion)
+	f := mustAlloc(proto.MessageTversion)
 	defer proto.Release(f)
 
 	tx := f.Tx.(*proto.Tversion)
@@ -286,7 +286,7 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 		authnum = auth.Num()
 	}
 
-	f := c.mustAlloc(proto.MessageTattach)
+	f := mustAlloc(proto.MessageTattach)
 	defer proto.Release(f)
 
 	tx := f.Tx.(*proto.Tlattach)
@@ -311,7 +311,7 @@ func (c *Client) Attach(auth *Fid, export, username string, uid int) (*Fid, erro
 }
 
 func (c *Client) stat(num uint32, mask uint64) (*proto.Rgetattr, error) {
-	f := c.mustAlloc(proto.MessageTgetattr)
+	f := mustAlloc(proto.MessageTgetattr)
 	defer proto.Release(f)
 
 	tx := f.Tx.(*proto.Tgetattr)

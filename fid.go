@@ -71,7 +71,7 @@ func (f *Fid) clunk() error {
 	f.opened = false
 	f.closing = true
 
-	fcall := f.c.mustAlloc(proto.MessageTclunk)
+	fcall := mustAlloc(proto.MessageTclunk)
 	tx := fcall.Tx.(*proto.Tclunk)
 	tx.Fid = f.num
 	err := f.c.rpc(fcall)
@@ -105,7 +105,7 @@ func (f *Fid) walk(names ...string) (uint32, *fileInfo, error) {
 		return 0, nil, errFidOverflow
 	}
 
-	fcall := f.c.mustAlloc(proto.MessageTwalk)
+	fcall := mustAlloc(proto.MessageTwalk)
 	defer proto.Release(fcall)
 
 	tx := fcall.Tx.(*proto.Twalk)
@@ -249,7 +249,7 @@ func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
 }
 
 func (f *Fid) create(name string, flag int, perm os.FileMode) error {
-	fcall := f.c.mustAlloc(proto.MessageTlcreate)
+	fcall := mustAlloc(proto.MessageTlcreate)
 	defer proto.Release(fcall)
 
 	tx := fcall.Tx.(*proto.Tlcreate)
@@ -283,7 +283,7 @@ func (f *Fid) mkdir(name string, perm os.FileMode) error {
 		return errInvalildName
 	}
 
-	fcall := f.c.mustAlloc(proto.MessageTmkdir)
+	fcall := mustAlloc(proto.MessageTmkdir)
 	tx := fcall.Tx.(*proto.Tmkdir)
 	tx.DirectoryFid = f.num
 	tx.Name = name
@@ -308,7 +308,7 @@ func (f *Fid) open(flag int) error {
 		return errFidOpened
 	}
 
-	fcall := f.c.mustAlloc(proto.MessageTlopen)
+	fcall := mustAlloc(proto.MessageTlopen)
 	defer proto.Release(fcall)
 
 	tx := fcall.Tx.(*proto.Tlopen)
@@ -346,7 +346,7 @@ func (f *Fid) remove() error {
 	f.opened = false
 	f.closing = true
 
-	fcall := f.c.mustAlloc(proto.MessageTremove)
+	fcall := mustAlloc(proto.MessageTremove)
 	tx := fcall.Tx.(*proto.Tremove)
 	tx.Fid = f.num
 	err := f.c.rpc(fcall)
