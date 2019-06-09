@@ -175,8 +175,9 @@ func (s *session) handshake() error {
 }
 
 func (s *session) serve() (err error) {
+	defer close(s.donec)
+
 	if err = s.handshake(); err != nil {
-		close(s.donec)
 		return err
 	}
 
@@ -207,8 +208,6 @@ func (s *session) serve() (err error) {
 
 	cancel()
 	wg.Wait()
-	close(s.donec)
-
 	return err
 }
 
