@@ -1,6 +1,7 @@
 package posix
 
 import (
+	"io"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -42,7 +43,7 @@ func (f *pfile) ReadDir(offset int64) ([]Record, error) {
 	}
 
 	if offset >= int64(len(f.cache)) {
-		return nil, unix.EIO
+		return nil, io.EOF
 	}
 
 	return f.cache[offset:], nil
