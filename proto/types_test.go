@@ -134,39 +134,3 @@ func TestQidCodec(t *testing.T) {
 		}
 	}
 }
-
-func TestDirentCodec(t *testing.T) {
-	buf := make([]byte, 0, 24)
-	for n, test := range []struct {
-		in  *Dirent
-		out *Dirent
-	}{
-		{&Dirent{
-			Qid{math.MaxUint8, math.MaxUint32, math.MaxUint64},
-			math.MaxUint64,
-			math.MaxUint8,
-			string16.String(),
-		}, &Dirent{}},
-		{&Dirent{}, &Dirent{}},
-	} {
-		in, out := test.in, test.out
-		buf = buf[:0]
-
-		buf, m, err := in.Marshal(buf)
-		if err != nil {
-			t.Fatalf("dirent(%d): marshal error: %v", n, err)
-		}
-		if m != in.Len() {
-			t.Fatalf("dirent(%d): expected marshal length %d, got %d",
-				n, in.Len(), m)
-		}
-
-		if _, err = out.Unmarshal(buf); err != nil {
-			t.Fatalf("dirent(%d): unmarshal error: %v", n, err)
-		}
-
-		if !reflect.DeepEqual(in, out) {
-			t.Errorf("dirent(%d): dirent differ\n%v\n%v", n, in, out)
-		}
-	}
-}

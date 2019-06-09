@@ -1,20 +1,28 @@
 // +build darwin linux
 
-package fs
+package posix
 
 import (
 	"encoding/binary"
 	"unsafe"
 
-	"github.com/azmodb/ninep/proto"
 	"golang.org/x/sys/unix"
 )
 
+// Record represents a platform independent directory entry. Ino is a
+// number which is unique for each distinct file in the filesystem.
+type Record struct {
+	Ino    uint64
+	Offset uint64
+	Type   uint8
+	Name   string
+}
+
 const direntBlockSize = 4 * 1024
 
-// readDirent reads directory entries from the given file descriptor. The
+// readDir reads directory entries from the given file descriptor. The
 // order of the directory entries is not specified.
-func readDirent(fd int) (entries []proto.Dirent, err error) {
+func readDir(fd int) (records []Record, err error) {
 	buf := make([]byte, direntBlockSize)
 	pos, size, offset := 0, 0, uint64(1)
 
@@ -29,33 +37,33 @@ func readDirent(fd int) (entries []proto.Dirent, err error) {
 			}
 		}
 
-		ents, consumed, off := parse(buf[pos:size], offset)
+		rec, consumed, off := parse(buf[pos:size], offset)
 		offset = off
 		pos += consumed
-		entries = append(entries, ents...)
+		records = append(records, rec...)
 	}
 
-	return entries, err
+	return records, err
 }
 
 // parse parses directory entries in buf. It returns the number of bytes
 // consumed from buf and the current offset.
-func parse(buf []byte, offset uint64) ([]proto.Dirent, int, uint64) {
-	var entries []proto.Dirent
+func parse(buf []byte, offset uint64) ([]Record, int, uint64) {
+	var records []Record
 	n := len(buf)
 
 	for len(buf) > 0 {
 		dirent := (*unix.Dirent)(unsafe.Pointer(&buf[0]))
 		reclen, ok := direntReclen(buf, dirent)
 		if !ok {
-			return entries, n, offset
+			return records, n, offset
 		}
 		rec := buf[:reclen]
 		buf = buf[reclen:]
 
 		ino, ok := direntIno(rec, dirent)
 		if !ok {
-			return entries, n, offset
+			return records, n, offset
 		}
 		if ino == 0 { // file absent in directory
 			continue
@@ -63,7 +71,7 @@ func parse(buf []byte, offset uint64) ([]proto.Dirent, int, uint64) {
 
 		typ, ok := direntType(rec, dirent)
 		if !ok {
-			return entries, n, offset
+			return records, n, offset
 		}
 		if typ == unix.DT_UNKNOWN { // TODO(mason)
 			continue
@@ -71,23 +79,18 @@ func parse(buf []byte, offset uint64) ([]proto.Dirent, int, uint64) {
 
 		name, ok := direntName(rec, dirent)
 		if !ok {
-			return entries, n, offset
+			return records, n, offset
 		}
 
-		entries = append(entries, proto.Dirent{
-			Qid: struct {
-				Type    uint8
-				Version uint32
-				Path    uint64
-			}{proto.UnixDirTypeToQidType(typ), 0, ino},
+		records = append(records, Record{
+			Ino:    ino,
 			Offset: offset,
 			Type:   typ,
 			Name:   name,
 		})
 		offset++
 	}
-
-	return entries, n - len(buf), offset
+	return records, n - len(buf), offset
 }
 
 func direntReclen(buf []byte, dirent *unix.Dirent) (uint64, bool) {
