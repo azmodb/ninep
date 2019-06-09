@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	"github.com/azmodb/ninep/proto"
+	"github.com/azmodb/pkg/log"
 	"golang.org/x/sys/unix"
 )
 
-//func init() { log.SetLevel(log.DebugLevel) } // verbose debug messages
+func init() { log.SetLevel(log.InfoLevel) } // verbose debug messages
 
 func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	server, client := net.Pipe()
@@ -20,10 +21,7 @@ func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	s := newSession(server, want, calcMaxDataSize(want))
 	go s.serve()
 
-	c, err := newClient(client)
-	if err != nil {
-		t.Fatalf("client: cannot initialize connection: %v", err)
-	}
+	c := newTestClient(t, client)
 	c.maxMessageSize = msize
 	c.maxDataSize = calcMaxDataSize(msize)
 
@@ -65,12 +63,8 @@ func TestSessionHandshakeVersion(t *testing.T) {
 	s := newSession(server, 8192, calcMaxDataSize(8192))
 	go s.serve()
 
-	c, err := newClient(client)
-	if err != nil {
-		t.Fatalf("client: cannot initialize connection: %v", err)
-	}
-
-	err = c.handshake("MALFORMED")
+	c := newTestClient(t, client)
+	err := c.handshake("MALFORMED")
 	if err != errVersionNotSupported {
 		t.Errorf("client: handshake unexpected error: %v", err)
 	}
