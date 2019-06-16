@@ -70,6 +70,11 @@ func hasPrefix(path, root string) bool {
 	return true
 }
 
+// isValidName returns whetever name is a valid filesystem name.
+func isValidName(name string) bool {
+	return !isReserved(name) && !strings.Contains(name, separator)
+}
+
 // isReserved returns whetever name is a reserved filesystem name.
 func isReserved(name string) bool {
 	return name == "" || name == "." || name == ".."

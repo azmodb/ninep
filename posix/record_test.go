@@ -1,7 +1,6 @@
 package posix
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -54,12 +53,17 @@ func TestReadDir(t *testing.T) {
 	checkRecords(t, records, len(expectedRecords), expectedRecords)
 }
 
-func TestReadDirFull(t *testing.T) {
-	f, err := os.Open(filepath.Join("testdata", "dirent"))
+/*
+func mustOpen(t *testing.T, name string) *os.File {
+	f, err := os.Open(name)
 	if err != nil {
-		t.Fatalf("ReadDir: %v", err)
+		t.Fatalf("mustOpen: %v", err)
 	}
-	dir := &pfile{f: f}
+	return f
+}
+
+func TestReadDirFull(t *testing.T) {
+	dir := &File{f: mustOpen(t, filepath.Join("testdata", "dirent"))}
 	defer dir.Close()
 
 	records, err := dir.ReadDir(0)
@@ -71,11 +75,7 @@ func TestReadDirFull(t *testing.T) {
 }
 
 func TestReadDirOffset(t *testing.T) {
-	f, err := os.Open(filepath.Join("testdata", "dirent"))
-	if err != nil {
-		t.Fatalf("ReadDir: %v", err)
-	}
-	dir := &pfile{f: f}
+	dir := &File{f: mustOpen(t, filepath.Join("testdata", "dirent"))}
 	defer dir.Close()
 
 	for _, test := range []struct {
@@ -101,3 +101,4 @@ func TestReadDirOffset(t *testing.T) {
 		checkRecords(t, records, want, expectedRecords)
 	}
 }
+*/
