@@ -117,3 +117,53 @@ func TestHasPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestChroot(t *testing.T) {
+	for num, test := range []struct {
+		root, path string
+		result     string
+		want       bool
+	}{
+		{"/", "/a", "/a", true},
+		{"/", "a", "/a", true},
+		{"", "/a", "/a", true},
+		{"", "a", "/a", true},
+
+		{"/a", "/b", "/a/b", true},
+		{"/a", "b", "/a/b", true},
+
+		{"/a/b", "../b/c", "/a/b/c", true},
+
+		{"/a/b", "/..", "", false},
+		{"/a/b", "..", "", false},
+
+		{"/a", "/..", "", false},
+		{"/a", "..", "", false},
+	} {
+		path, success := chroot(test.root, test.path)
+		if success != test.want {
+			t.Errorf("chroot(%d): expected result %v, got %v", num, test.want, success)
+		}
+		if path != test.result {
+			t.Errorf("chroot(%d): expected result %q, got %q", num, test.result, path)
+		}
+	}
+}
+
+func TestIsValidName(t *testing.T) {
+	check := func(t *testing.T, result, want bool) {
+		t.Helper()
+		if result != want {
+			t.Errorf("isValidName: expected result %v, got %v", want, result)
+		}
+	}
+
+	check(t, isValidName(".."), false)
+	check(t, isValidName("."), false)
+	check(t, isValidName(""), false)
+
+	check(t, isValidName("/"), false)
+	check(t, isValidName("a/"), false)
+	check(t, isValidName("a/b"), false)
+	check(t, isValidName("/a/b"), false)
+}
