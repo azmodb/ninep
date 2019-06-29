@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	_ (FileSystem) = (*unixFS)(nil)   // unixFS implements a chrooted FileSystem
-	_ (File)       = (*unixFile)(nil) // unixfile implements File
+	_ (FileSystem) = (*posixFS)(nil)   // posixFS implements a chrooted FileSystem
+	_ (File)       = (*posixFile)(nil) // unixfile implements File
 )
 
 // FileSystem is the filesystem interface. Any simulated or real system
@@ -32,19 +32,19 @@ type File interface {
 
 type Stat = unix.Stat_t
 
-type unixFS struct {
+type posixFS struct {
 	root string
 	uid  uint32
 	gid  uint32
 }
 
-type unixFile struct {
+type posixFile struct {
 	f *os.File
 }
 
-func (fs *unixFS) Close() error { return nil }
+func (fs *posixFS) Close() error { return nil }
 
-func (fs *unixFS) Create(path string, flags int, perm os.FileMode, uid, gid uint32) (File, error) {
+func (fs *posixFS) Create(path string, flags int, perm os.FileMode, uid, gid uint32) (File, error) {
 	if flags&os.O_CREATE == 0 {
 		flags |= os.O_CREATE
 	}
@@ -69,10 +69,10 @@ func (fs *unixFS) Create(path string, flags int, perm os.FileMode, uid, gid uint
 	if err != nil {
 		return nil, err
 	}
-	return &unixFile{f: file}, err
+	return &posixFile{f: file}, err
 }
 
-func (fs *unixFS) Open(path string, flags int, uid, gid uint32) (File, error) {
+func (fs *posixFS) Open(path string, flags int, uid, gid uint32) (File, error) {
 	if flags&os.O_CREATE != 0 {
 		flags &= ^os.O_CREATE
 	}
@@ -91,10 +91,10 @@ func (fs *unixFS) Open(path string, flags int, uid, gid uint32) (File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &unixFile{f: file}, err
+	return &posixFile{f: file}, err
 }
 
-func (fs *unixFS) Remove(path string, uid, gid uint32) (err error) {
+func (fs *posixFS) Remove(path string, uid, gid uint32) (err error) {
 	path, ok := chroot(fs.root, path)
 	if !ok {
 		return unix.EPERM
@@ -112,7 +112,7 @@ func mkdev(major uint32, minor uint32) int {
 	return int(unix.Mkdev(major, minor))
 }
 
-func (fs *unixFS) Mknod(path string, perm os.FileMode, major, minor, uid, gid uint32) (err error) {
+func (fs *posixFS) Mknod(path string, perm os.FileMode, major, minor, uid, gid uint32) (err error) {
 	path, ok := chroot(fs.root, path)
 	if !ok {
 		return unix.EPERM
@@ -127,7 +127,7 @@ func (fs *unixFS) Mknod(path string, perm os.FileMode, major, minor, uid, gid ui
 	return err
 }
 
-func (fs *unixFS) Stat(path string) (*Stat, error) {
+func (fs *posixFS) Stat(path string) (*Stat, error) {
 	path, ok := chroot(fs.root, path)
 	if !ok {
 		return nil, unix.EPERM
@@ -140,4 +140,4 @@ func (fs *unixFS) Stat(path string) (*Stat, error) {
 	return stat, nil
 }
 
-func (f *unixFile) Close() error { return f.f.Close() }
+func (f *posixFile) Close() error { return f.f.Close() }
