@@ -80,7 +80,7 @@ func (s *session) send(tag uint16, m proto.Message) {
 	err := s.encode(tag, m)
 	s.writer.Unlock()
 	if err != nil {
-		log.Debugf("session: sending response: %v", err)
+		log.Errorf("session: sending response: %v", err)
 	}
 }
 
@@ -90,7 +90,7 @@ func (s *session) rerror(tag uint16, e error) {
 	err := s.encode(tag, &s.rlerror)
 	s.writer.Unlock()
 	if err != nil {
-		log.Debugf("session: sending error response: %v", err)
+		log.Errorf("session: sending error response: %v", err)
 	}
 }
 
