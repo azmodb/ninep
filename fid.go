@@ -237,25 +237,25 @@ func (f *Fid) ReadDir(n int) ([]os.FileInfo, error) {
 //
 // Finally, the newly created file is opened according to perm, and fid
 // will represent the newly opened file.
-func (f *Fid) Create(name string, flag int, perm os.FileMode) error {
+func (f *Fid) Create(name string, flags int, perm os.FileMode) error {
 	if isReserved(name) {
 		return errInvalildName
 	}
 
 	f.mu.Lock()
-	err := f.create(name, flag, perm)
+	err := f.create(name, flags, perm)
 	f.mu.Unlock()
 	return err
 }
 
-func (f *Fid) create(name string, flag int, perm os.FileMode) error {
+func (f *Fid) create(name string, flags int, perm os.FileMode) error {
 	fcall := mustAlloc(proto.MessageTlcreate)
 	defer proto.Release(fcall)
 
 	tx := fcall.Tx.(*proto.Tlcreate)
 	tx.Fid = f.num
 	tx.Name = name
-	tx.Flags = proto.NewFlag(flag)
+	tx.Flags = proto.NewFlag(flags)
 	tx.Perm = proto.NewMode(perm)
 	tx.Gid = f.fi.Gid
 	if err := f.c.rpc(fcall); err != nil {
@@ -294,16 +294,16 @@ func (f *Fid) mkdir(name string, perm os.FileMode) error {
 	return err
 }
 
-// Open opens the file represented by fid with specified flag
+// Open opens the file represented by fid with specified flags
 // (os.O_RDONLY etc.). If successful, it can be used for I/O.
-func (f *Fid) Open(flag int) error {
+func (f *Fid) Open(flags int) error {
 	f.mu.Lock()
-	err := f.open(flag)
+	err := f.open(flags)
 	f.mu.Unlock()
 	return err
 }
 
-func (f *Fid) open(flag int) error {
+func (f *Fid) open(flags int) error {
 	if f.opened {
 		return errFidOpened
 	}
@@ -313,7 +313,7 @@ func (f *Fid) open(flag int) error {
 
 	tx := fcall.Tx.(*proto.Tlopen)
 	tx.Fid = f.num
-	tx.Flags = proto.NewFlag(flag)
+	tx.Flags = proto.NewFlag(flags)
 	if err := f.c.rpc(fcall); err != nil {
 		return err
 	}
