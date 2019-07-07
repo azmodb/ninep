@@ -10,7 +10,7 @@ import (
 	"github.com/azmodb/pkg/log"
 )
 
-func newTestUnixFS(t *testing.T) *posixFS {
+func newTestPosixFS(t *testing.T) *posixFS {
 	t.Helper()
 
 	root, err := ioutil.TempDir("", "ninep-posix-test")
@@ -44,7 +44,7 @@ func getTestUser(t *testing.T) (uid, gid int) {
 
 func TestCreateOpenRemove(t *testing.T) {
 	euid, egid := getTestUser(t)
-	fs := newTestUnixFS(t)
+	fs := newTestPosixFS(t)
 	defer os.RemoveAll(fs.root)
 
 	for num, test := range []struct {

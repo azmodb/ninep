@@ -3,7 +3,9 @@ package posix
 import (
 	"math"
 	"os"
+	"os/user"
 	"runtime"
+	"strconv"
 
 	"github.com/azmodb/pkg/log"
 	"golang.org/x/sys/unix"
@@ -25,12 +27,16 @@ type FileSystem interface {
 
 	Stat(path string) (*Stat, error)
 
+	Lookup(username string, uid int) (gid int, err error)
+
 	Close() error
 }
 
 // File represents a file in the filesystem and is a set of operations
 // corresponding to a single node.
 type File interface {
+	WriteAt(p []byte, offset int64) (int, error)
+	ReadAt(p []byte, offset int64) (int, error)
 	Close() error
 }
 
@@ -71,6 +77,25 @@ func newPosixFS(root string, euid, egid int) (*posixFS, error) {
 }
 
 func (fs *posixFS) Close() error { return nil }
+
+func (fs *posixFS) Lookup(username string, uid int) (int, error) {
+	var u *user.User
+	var err error
+	if uid < 0 || uid >= math.MaxUint32 {
+		u, err = user.Lookup(username)
+	} else {
+		u, err = user.LookupId(strconv.FormatInt(int64(uid), 10))
+	}
+	if err != nil {
+		return math.MaxUint32, err
+	}
+
+	gid, err := strconv.ParseInt(u.Gid, 10, 64)
+	if err != nil {
+		return math.MaxUint32, err
+	}
+	return int(gid), err
+}
 
 func (fs *posixFS) setid(euid, egid int) (err error) {
 	runtime.LockOSThread()
