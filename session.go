@@ -24,6 +24,7 @@ type session struct {
 	encErr  error
 	rlerror proto.Rlerror
 
+	wg     *sync.WaitGroup
 	dec    *proto.Decoder
 	fidmap *fidmap
 
@@ -44,6 +45,7 @@ func newSession(rwc io.ReadWriteCloser, msize, dsize uint32) *session {
 		fidmap:      newFidmap(),
 		maxDataSize: dsize,
 
+		wg:    &sync.WaitGroup{},
 		donec: make(chan struct{}),
 	}
 }
@@ -80,7 +82,7 @@ func (s *session) send(tag uint16, m proto.Message) {
 	err := s.encode(tag, m)
 	s.writer.Unlock()
 	if err != nil {
-		log.Debugf("session: sending response: %v", err)
+		log.Errorf("session: sending response: %v", err)
 	}
 }
 
@@ -90,7 +92,7 @@ func (s *session) rerror(tag uint16, e error) {
 	err := s.encode(tag, &s.rlerror)
 	s.writer.Unlock()
 	if err != nil {
-		log.Debugf("session: sending error response: %v", err)
+		log.Errorf("session: sending error response: %v", err)
 	}
 }
 
@@ -182,7 +184,6 @@ func (s *session) serve() (err error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	wg := &sync.WaitGroup{}
 	for err == nil {
 		mtype, tag, decErr := s.dec.DecodeHeader()
 		if err = decErr; err != nil {
@@ -202,15 +203,15 @@ func (s *session) serve() (err error) {
 			break
 		}
 
-		wg.Add(1)
-		go s.call(ctx, fcall, wg)
+		s.wg.Add(1)
+		go s.call(ctx, fcall)
 	}
 
 	cancel()
-	wg.Wait()
+	s.wg.Wait()
 	return err
 }
 
-func (s *session) call(ctx context.Context, fcall *proto.Fcall, wg *sync.WaitGroup) {
-	wg.Done()
+func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
+	s.wg.Done()
 }

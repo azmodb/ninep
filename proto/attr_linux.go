@@ -82,3 +82,12 @@ func EncodeRstatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
 
 	return buf.Err()
 }
+
+// StatToQid converts an unix.Stat_t.
+func StatToQid(st *unix.Stat_t) Qid {
+	return Qid{
+		Type:    UnixFileTypeToQidType(uint32(st.Mode)),
+		Version: uint32(st.Mtim.Nano() ^ st.Size<<8),
+		Path:    st.Ino,
+	}
+}

@@ -34,7 +34,6 @@ func NewServer(service Service, opts ...Option) *Server {
 
 func (s *Server) Listen(listener net.Listener) (err error) {
 	wg := &sync.WaitGroup{}
-
 	for err == nil {
 		conn, lerr := listener.Accept()
 		if err = lerr; err != nil {
@@ -57,11 +56,13 @@ func (s *Server) Listen(listener net.Listener) (err error) {
 
 			err := sess.serve()
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				// TODO
 			}
 			if err == unix.EINVAL {
+				// TODO
 			}
 
-			conn.Close()
+			sess.Close()
 			s.mu.Lock()
 			delete(s.sessions, id)
 			s.mu.Unlock()
@@ -71,8 +72,8 @@ func (s *Server) Listen(listener net.Listener) (err error) {
 	}
 
 	s.mu.Lock()
-	for id, c := range s.sessions {
-		c.Close()
+	for id, sess := range s.sessions {
+		sess.Close()
 		delete(s.sessions, id)
 	}
 	s.mu.Unlock()
