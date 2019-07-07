@@ -40,6 +40,7 @@ type File interface {
 	Close() error
 }
 
+// Stat describes a file system object.
 type Stat = unix.Stat_t
 
 type posixFS struct {
@@ -48,6 +49,8 @@ type posixFS struct {
 	egid int
 }
 
+// Open opens a FileSystem implementation backed by the underlying
+// operating system's file system.
 func Open(root string, uid, gid int) (FileSystem, error) {
 	return newPosixFS(root, uid, gid)
 }
