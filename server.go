@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/azmodb/ninep/posix"
 	"github.com/azmodb/ninep/proto"
 	"github.com/azmodb/pkg/pool"
 	"golang.org/x/sys/unix"
@@ -19,13 +20,17 @@ type Server struct {
 
 	maxMessageSize uint32
 	maxDataSize    uint32
+
+	fs posix.FileSystem
 }
 
-func NewServer(service Service, opts ...Option) *Server {
+func NewServer(fs posix.FileSystem, opts ...Option) *Server {
 	return &Server{
 		// TODO: max concurrent sessions
 		sid:      pool.NewGenerator(1, math.MaxUint16),
 		sessions: make(map[int64]io.Closer),
+
+		fs: fs,
 
 		maxMessageSize: proto.MaxMessageSize,
 		maxDataSize:    proto.MaxDataSize,
@@ -52,7 +57,7 @@ func (s *Server) Listen(listener net.Listener) (err error) {
 
 		wg.Add(1)
 		go func(conn net.Conn, id int64) {
-			sess := newSession(conn, s.maxMessageSize, s.maxDataSize)
+			sess := newSession(s.fs, conn, s.maxMessageSize, s.maxDataSize)
 
 			err := sess.serve()
 			if err == io.EOF || err == io.ErrUnexpectedEOF {

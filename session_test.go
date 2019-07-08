@@ -18,7 +18,7 @@ func init() { log.SetLevel(log.InfoLevel) } // verbose debug messages
 func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	server, client := net.Pipe()
 
-	s := newSession(server, want, calcMaxDataSize(want))
+	s := newSession(nil, server, want, calcMaxDataSize(want))
 	go s.serve()
 
 	c := newTestClient(t, client)
@@ -60,7 +60,7 @@ func TestSessionHandshake(t *testing.T) {
 func TestSessionHandshakeVersion(t *testing.T) {
 	server, client := net.Pipe()
 
-	s := newSession(server, 8192, calcMaxDataSize(8192))
+	s := newSession(nil, server, 8192, calcMaxDataSize(8192))
 	go s.serve()
 
 	c := newTestClient(t, client)
