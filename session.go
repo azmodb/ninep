@@ -7,16 +7,11 @@ import (
 	"os"
 	"sync"
 
+	"github.com/azmodb/ninep/posix"
 	"github.com/azmodb/ninep/proto"
 	"github.com/azmodb/pkg/log"
 	"golang.org/x/sys/unix"
 )
-
-type fidmap struct{}
-
-func newFidmap() *fidmap { return nil }
-
-func (f *fidmap) Clear() {}
 
 type session struct {
 	writer  sync.Mutex // exclusive stream encoder
@@ -24,11 +19,10 @@ type session struct {
 	encErr  error
 	rlerror proto.Rlerror
 
-	wg     *sync.WaitGroup
-	dec    *proto.Decoder
-	fidmap *fidmap
-
+	dec         *proto.Decoder
 	maxDataSize uint32
+
+	srv *service
 
 	mu       sync.Mutex // protects following
 	c        io.Closer
@@ -36,16 +30,14 @@ type session struct {
 	donec    chan struct{}
 }
 
-func newSession(rwc io.ReadWriteCloser, msize, dsize uint32) *session {
+func newSession(fs posix.FileSystem, rwc io.ReadWriteCloser, msize, dsize uint32) *session {
 	return &session{
-		enc: proto.NewEncoder(rwc, msize),
-		dec: proto.NewDecoder(rwc, msize),
-		c:   rwc,
-
-		fidmap:      newFidmap(),
+		enc:         proto.NewEncoder(rwc, msize),
+		dec:         proto.NewDecoder(rwc, msize),
+		c:           rwc,
 		maxDataSize: dsize,
 
-		wg:    &sync.WaitGroup{},
+		srv:   newService(fs),
 		donec: make(chan struct{}),
 	}
 }
@@ -136,7 +128,7 @@ func (s *session) tversion(tx *proto.Tversion, rx *proto.Rversion) error {
 		return errVersionNotSupported
 	}
 
-	s.fidmap.Clear()
+	s.srv.fidmap.Clear()
 	s.enc.MaxMessageSize = rx.MessageSize
 	s.dec.MaxMessageSize = rx.MessageSize
 	s.maxDataSize = rx.MessageSize - (proto.FixedReadWriteSize + 1)
@@ -184,6 +176,7 @@ func (s *session) serve() (err error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
 	for err == nil {
 		mtype, tag, decErr := s.dec.DecodeHeader()
 		if err = decErr; err != nil {
@@ -203,15 +196,56 @@ func (s *session) serve() (err error) {
 			break
 		}
 
-		s.wg.Add(1)
-		go s.call(ctx, fcall)
+		wg.Add(1)
+		go func(ctx context.Context, fcall *proto.Fcall) {
+			s.call(ctx, fcall)
+			if fcall.Err != nil {
+				s.rerror(tag, fcall.Err)
+			} else {
+				s.send(tag, fcall.Rx)
+			}
+			wg.Done()
+		}(ctx, fcall)
 	}
 
 	cancel()
-	s.wg.Wait()
+	wg.Wait()
 	return err
 }
 
 func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
-	s.wg.Done()
+	switch fcall.Tx.MessageType() {
+	case proto.MessageTlattach:
+		fcall.Err = s.srv.attach(ctx, fcall.Tx.(*proto.Tlattach), fcall.Rx.(*proto.Rlattach))
+	case proto.MessageTlauth:
+		fcall.Err = s.srv.auth(ctx, fcall.Tx.(*proto.Tlauth), fcall.Rx.(*proto.Rlauth))
+	case proto.MessageTflush:
+		fcall.Err = s.srv.flush(ctx, fcall.Tx.(*proto.Tflush), fcall.Rx.(*proto.Rflush))
+
+	case proto.MessageTwalk:
+	case proto.MessageTread:
+	case proto.MessageTwrite:
+	case proto.MessageTclunk:
+	case proto.MessageTremove:
+
+	case proto.MessageTstatfs:
+	case proto.MessageTlopen:
+	case proto.MessageTcreate:
+	case proto.MessageTsymlink:
+	case proto.MessageTmknod:
+	case proto.MessageTrename:
+	case proto.MessageTreadlink:
+	case proto.MessageTgetattr:
+	case proto.MessageTsetattr:
+	case proto.MessageTxattrwalk:
+	case proto.MessageTxattrcreate:
+	case proto.MessageTreaddir:
+	case proto.MessageTfsync:
+	case proto.MessageTlock:
+	case proto.MessageTgetlock:
+	case proto.MessageTlink:
+	case proto.MessageTmkdir:
+	case proto.MessageTrenameat:
+	case proto.MessageTunlinkat:
+	}
 }
