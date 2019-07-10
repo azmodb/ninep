@@ -1,30 +1,65 @@
-// +build compat
-
 package ninep
 
 import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"math"
-	"os"
+	"net"
 	"testing"
+
+	"github.com/azmodb/ninep/posix"
+	"github.com/azmodb/pkg/log"
 )
 
-// func init() { log.SetLevel(log.InfoLevel) }
+const (
+	diodTestServerAddr = "127.0.0.1:5640"
+	testServerAddr     = "127.0.0.1:5641"
 
-const diodTestServerAddr = "127.0.0.1:5640"
+	testMaxMessageSize = 64 * 1024
+)
 
-const diodMaxMessageSize = 64 * 1024
-
-func newCompatTestClient(t *testing.T) *Client {
+func newTestClient(t *testing.T, addr string, opts ...Option) *Client {
 	t.Helper()
 
-	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
+	c, err := Dial(context.Background(), "tcp", addr, opts...)
 	if err != nil {
-		t.Fatalf("cannot dial diod test-server: %v", err)
+		t.Fatalf("cannot dial test-server: %v", err)
 	}
 	return c
+}
+
+// TODO(mason): copied from posix/fs_test.go
+func newTestPosixFS(t *testing.T) posix.FileSystem {
+	t.Helper()
+
+	root, err := ioutil.TempDir("", "ninep-posix-test")
+	if err != nil {
+		log.Panicf("cannot create posix package test directory: %v", err)
+	}
+
+	fs, err := posix.Open(root, -1, -1)
+	if err != nil {
+		log.Panicf("cannot init posix package filesystem: %v", err)
+	}
+	return fs
+}
+
+func newTestServer(t *testing.T, addr string) net.Listener {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listener: %v", err)
+	}
+	s := NewServer(newTestPosixFS(t))
+	go func() {
+		if err := s.Listen(listener); err != nil {
+			//t.Fatalf("fileserver: %v", err) // TODO(mason)
+		}
+	}()
+	return listener
 }
 
 func attach(t *testing.T, c *Client, path string) *Fid {
@@ -49,7 +84,7 @@ func checkFidIsDir(t *testing.T, f *Fid) {
 	t.Helper()
 
 	if !f.fi.IsDir() {
-		t.Fatalf("fid: expected directory fid, got %q", f.fi.Qid)
+		t.Fatalf("fid: expected directory fid, got %q", f.fi)
 	}
 }
 
@@ -61,45 +96,63 @@ func checkFidIsFile(t *testing.T, f *Fid) {
 	}
 }
 
-func TestCompatHandshake(t *testing.T) {
-	c, err := Dial(context.Background(), "tcp", diodTestServerAddr)
+func testHandshake(t *testing.T, num int, addr string) {
+	t.Helper()
+
+	c, err := Dial(context.Background(), "tcp", addr,
+		WithMaxMessageSize(testMaxMessageSize),
+	)
 	if err != nil {
-		t.Fatalf("cannot dial diod test-server: %v", err)
+		t.Fatalf("handshake(%d): cannot dial test-server: %v", num, err)
 	}
 	defer func() {
 		if err := c.Close(); err != nil {
-			t.Fatalf("closing connection: %v", err)
+			t.Fatalf("handshake(%d): closing connection: %v", num, err)
 		}
 	}()
 
-	if c.maxMessageSize != diodMaxMessageSize {
-		t.Fatalf("compat: expected maxMessageSize = %d, got %d",
-			diodMaxMessageSize, c.maxMessageSize)
+	if c.maxMessageSize != testMaxMessageSize {
+		t.Fatalf("handshake(%d): expected maxMessageSize = %d, got %d",
+			num, testMaxMessageSize, c.maxMessageSize)
 	}
-	if c.maxDataSize != diodMaxMessageSize-24 {
-		t.Fatalf("compat: expected maxDataSize = %d, got %d",
-			diodMaxMessageSize-24, c.maxDataSize)
+	if c.maxDataSize != testMaxMessageSize-24 {
+		t.Fatalf("handshake(%d): expected maxDataSize = %d, got %d",
+			num, testMaxMessageSize-24, c.maxDataSize)
 	}
 }
 
-func TestAttach(t *testing.T) {
+/*
+func testAttach(t *testing.T, num int, addr string) {
 	t.Parallel()
 
-	c := newCompatTestClient(t)
+	c := newTestClient(t, addr)
 	defer c.Close()
 
-	f, err := c.Attach(nil, "/tmp", "root", math.MaxUint32)
+	f, err := c.Attach(nil, "/", "root", math.MaxUint32)
 	if err != nil {
-		t.Fatalf("attach: %v", err)
+		t.Fatalf("attach(%d): %v", num, err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			t.Fatalf("clunk: %v", err)
+			t.Fatalf("clunk(%d): %v", num, err)
 		}
 	}()
 
 	checkFidIsDir(t, f)
 }
+*/
+
+func TestCompat(t *testing.T) {
+	s := newTestServer(t, testServerAddr)
+	defer s.Close()
+
+	for num, addr := range []string{testServerAddr /*, diodTestServer*/} {
+		testHandshake(t, num, addr)
+		// testAttach(t, num, addr)
+	}
+}
+
+/*
 
 func TestCreateRemove(t *testing.T) {
 	t.Parallel()

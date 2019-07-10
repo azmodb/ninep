@@ -3,6 +3,7 @@ package ninep
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -198,7 +199,10 @@ func (s *session) serve() (err error) {
 
 		wg.Add(1)
 		go func(ctx context.Context, fcall *proto.Fcall) {
+			log.Debugf("-> %s tag:%d %s", fcall.Tx.MessageType(), tag, fcall.Tx)
 			s.call(ctx, fcall)
+			log.Debugf("<- %s tag:%d %s", fcall.Rx.MessageType(), tag, fcall.Rx)
+			fmt.Printf("<- %s tag:%d %s\n", fcall.Rx.MessageType(), tag, fcall.Rx)
 			if fcall.Err != nil {
 				s.rerror(tag, fcall.Err)
 			} else {
@@ -214,13 +218,14 @@ func (s *session) serve() (err error) {
 }
 
 func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
+	var errno unix.Errno
 	switch fcall.Tx.MessageType() {
 	case proto.MessageTlattach:
-		fcall.Err = s.srv.attach(ctx, fcall.Tx.(*proto.Tlattach), fcall.Rx.(*proto.Rlattach))
+		errno = s.srv.attach(ctx, fcall.Tx.(*proto.Tlattach), fcall.Rx.(*proto.Rlattach))
 	case proto.MessageTlauth:
-		fcall.Err = s.srv.auth(ctx, fcall.Tx.(*proto.Tlauth), fcall.Rx.(*proto.Rlauth))
+		errno = s.srv.auth(ctx, fcall.Tx.(*proto.Tlauth), fcall.Rx.(*proto.Rlauth))
 	case proto.MessageTflush:
-		fcall.Err = s.srv.flush(ctx, fcall.Tx.(*proto.Tflush), fcall.Rx.(*proto.Rflush))
+		errno = s.srv.flush(ctx, fcall.Tx.(*proto.Tflush), fcall.Rx.(*proto.Rflush))
 
 	case proto.MessageTwalk:
 	case proto.MessageTread:
@@ -236,6 +241,7 @@ func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
 	case proto.MessageTrename:
 	case proto.MessageTreadlink:
 	case proto.MessageTgetattr:
+		errno = unix.ENOTSUP
 	case proto.MessageTsetattr:
 	case proto.MessageTxattrwalk:
 	case proto.MessageTxattrcreate:
@@ -247,5 +253,8 @@ func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
 	case proto.MessageTmkdir:
 	case proto.MessageTrenameat:
 	case proto.MessageTunlinkat:
+	}
+	if errno != 0 {
+		fcall.Err = errno
 	}
 }
