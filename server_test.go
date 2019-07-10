@@ -75,7 +75,11 @@ func TestSessionHandling(t *testing.T) {
 
 	for i := 0; i < num; i++ {
 		conn, _ := l.Dial()
-		c := newTestClient(t, conn)
+		c, err := newClient(conn)
+		if err != nil {
+			t.Fatalf("client: cannot initialize connection: %v", err)
+		}
+
 		c.handshake("9P2000.L")
 		clients = append(clients, c)
 	}

@@ -2,6 +2,7 @@ package ninep
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math"
 	"net"
@@ -39,6 +40,22 @@ type Client struct {
 // Option sets Server or Client options such as logging, max message
 // size etc.
 type Option func(interface{}) error
+
+func WithMaxMessageSize(size uint32) Option {
+	return func(v interface{}) error {
+		switch v.(type) {
+		case *Client:
+			v.(*Client).maxMessageSize = size
+			v.(*Client).maxDataSize = size - (proto.FixedReadWriteSize + 1)
+			return nil
+		case *Server:
+			v.(*Server).maxMessageSize = size
+			v.(*Server).maxDataSize = size - (proto.FixedReadWriteSize + 1)
+			return nil
+		}
+		return fmt.Errorf("unknown ninep option type: %T", v)
+	}
+}
 
 // Dial connects to an 9P2000.L server at the specified network address.
 //

@@ -21,7 +21,7 @@ func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	s := newSession(nil, server, want, calcMaxDataSize(want))
 	go s.serve()
 
-	c := newTestClient(t, client)
+	c, _ := newClient(client)
 	c.maxMessageSize = msize
 	c.maxDataSize = calcMaxDataSize(msize)
 
@@ -63,7 +63,7 @@ func TestSessionHandshakeVersion(t *testing.T) {
 	s := newSession(nil, server, 8192, calcMaxDataSize(8192))
 	go s.serve()
 
-	c := newTestClient(t, client)
+	c, _ := newClient(client)
 	err := c.handshake("MALFORMED")
 	if err != errVersionNotSupported {
 		t.Errorf("client: handshake unexpected error: %v", err)
