@@ -45,8 +45,6 @@ var generatedLinuxPackets = []packet{
 	{&Rreadlink{Target: string16.String()}, &Rreadlink{}},
 	{&Tgetattr{}, &Tgetattr{}},
 	{&Tgetattr{Fid: math.MaxUint32, RequestMask: math.MaxUint64}, &Tgetattr{}},
-	{&Rgetattr{}, &Rgetattr{}},
-	{&Rgetattr{Valid: math.MaxUint64, Qid: Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64}, Mode: math.MaxUint32, Uid: math.MaxUint32, Gid: math.MaxUint32, Nlink: math.MaxUint64, Rdev: math.MaxUint64, Size: math.MaxUint64, BlockSize: math.MaxUint64, Blocks: math.MaxUint64, Gen: math.MaxUint64, DataVersion: math.MaxUint64}, &Rgetattr{}},
 	{&Tsetattr{}, &Tsetattr{}},
 	{&Tsetattr{Fid: math.MaxUint32, Valid: math.MaxUint32, Mode: math.MaxUint32, Uid: math.MaxUint32, Gid: math.MaxUint32, Size: math.MaxUint64}, &Tsetattr{}},
 	{&Rsetattr{}, &Rsetattr{}},

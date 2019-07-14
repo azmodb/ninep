@@ -7,30 +7,9 @@ import (
 	"testing"
 
 	"github.com/azmodb/ninep/binary"
-	"golang.org/x/sys/unix"
 )
 
 var customTestPackets = []packet{
-	{&Rgetattr{
-		Valid:       math.MaxUint64,
-		Qid:         Qid{Type: math.MaxUint8, Version: math.MaxUint32, Path: math.MaxUint64},
-		Mode:        math.MaxUint32,
-		Uid:         math.MaxUint32,
-		Gid:         math.MaxUint32,
-		Nlink:       math.MaxUint64,
-		Rdev:        math.MaxUint64,
-		Size:        math.MaxUint64,
-		BlockSize:   math.MaxUint64,
-		Blocks:      math.MaxUint64,
-		Atime:       unix.NsecToTimespec(math.MaxInt64),
-		Mtime:       unix.NsecToTimespec(math.MaxInt64),
-		Ctime:       unix.NsecToTimespec(math.MaxInt64),
-		Btime:       unix.NsecToTimespec(math.MaxInt64),
-		Gen:         math.MaxUint64,
-		DataVersion: math.MaxUint64,
-	}, &Rgetattr{}},
-	{&Rgetattr{}, &Rgetattr{}},
-
 	{&Twalk{}, &Twalk{}},
 	{&Twalk{Fid: math.MaxUint32, NewFid: math.MaxUint32, Names: testNames}, &Twalk{}},
 
