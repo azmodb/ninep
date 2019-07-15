@@ -248,6 +248,12 @@ func (m *Rgetattr) Decode(buf *binary.Buffer) {
 	DecodeRgetattr(buf, &m.Valid, m.Stat_t)
 }
 
+// IsDir reports whether m describes a directory. That is, it tests for
+// the ModeDir bit being set in m.
+func (m Rgetattr) IsDir() bool {
+	return m.Mode&unix.S_IFDIR != 0
+}
+
 // Tsetattr sets attributes of a file system object referenced by fid.
 type Tsetattr struct {
 	Fid uint32

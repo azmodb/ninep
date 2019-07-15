@@ -16,7 +16,8 @@ func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint32(uint32(st.Mtim.Nano() ^ st.Size<<8))
 	buf.PutUint64(st.Ino)
 
-	buf.PutUint32(uint32(st.Mode))
+	mode := NewModeUnix(uint32(st.Mode))
+	buf.PutUint32(uint32(mode))
 	buf.PutUint32(st.Uid)
 	buf.PutUint32(st.Gid)
 	buf.PutUint64(uint64(st.Nlink))
@@ -44,7 +45,8 @@ func DecodeRgetattr(buf *binary.Buffer, valid *uint64, st *unix.Stat_t) error {
 	_ = buf.Uint32() // qid version
 	st.Ino = buf.Uint64()
 
-	st.Mode = uint16(buf.Uint32())
+	mode := NewUnixMode(Mode(buf.Uint32()))
+	st.Mode = uint16(mode)
 	st.Uid = buf.Uint32()
 	st.Gid = buf.Uint32()
 	st.Nlink = uint16(buf.Uint64())
