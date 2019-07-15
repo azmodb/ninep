@@ -18,7 +18,6 @@ func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 
 	mode := NewModeUnix(uint32(st.Mode))
 	buf.PutUint32(uint32(mode))
-	buf.PutUint32(st.Mode)
 	buf.PutUint32(st.Uid)
 	buf.PutUint32(st.Gid)
 	buf.PutUint64(st.Nlink)
