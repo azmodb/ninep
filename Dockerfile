@@ -8,8 +8,9 @@ RUN set -eux; apk add --no-cache \
 		git \
 		gcc \
 		libc-dev \
-		; \
-	go get -d ./...
+		;
+
+RUN go get -d ./...
 
 ENTRYPOINT ["go"]
 CMD ["test", "./..."]
