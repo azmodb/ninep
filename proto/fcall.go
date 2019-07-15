@@ -34,7 +34,7 @@ func (f *Fcall) Reset() {
 	f.Err = nil
 }
 
-// Release resets all state and adds all Releaser to their pool.
+// Release resets all state and adds all fcalls to their pool.
 func Release(fcall ...*Fcall) {
 	for _, f := range fcall {
 		if f.Tx == nil {

@@ -84,7 +84,7 @@ func NewMode(mode os.FileMode) Mode {
 	return m
 }
 
-// NewModeUnix returns a FileMode from a mode_t.
+// NewModeUnix returns a Mode from a mode_t.
 func NewModeUnix(mode uint32) Mode {
 	m := Mode(mode & ModePerm)
 
@@ -113,6 +113,39 @@ func NewModeUnix(mode uint32) Mode {
 	}
 	if mode&unix.S_ISVTX != 0 {
 		m |= ModeSticky
+	}
+	return m
+}
+
+// NewUnixMode returns a mode_t from a Mode.
+func NewUnixMode(mode Mode) uint32 {
+	m := uint32(mode & ModePerm)
+
+	switch mode & ModeMask {
+	case ModeCharacterDevice:
+		m |= unix.S_IFCHR
+	case ModeBlockDevice:
+		m |= unix.S_IFBLK
+	case ModeNamedPipe:
+		m |= unix.S_IFIFO
+	case ModeSymlink:
+		m |= unix.S_IFLNK
+	case ModeSocket:
+		m |= unix.S_IFSOCK
+	case ModeDirectory:
+		m |= unix.S_IFDIR
+	case ModeRegular:
+		// nothing to do
+	}
+
+	if mode&ModeGroupID != 0 {
+		m |= unix.S_ISGID
+	}
+	if mode&ModeUserID != 0 {
+		m |= unix.S_ISUID
+	}
+	if mode&ModeSticky != 0 {
+		m |= unix.S_ISVTX
 	}
 	return m
 }

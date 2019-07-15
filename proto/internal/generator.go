@@ -340,6 +340,7 @@ var ignore = map[string]bool{
 	"Rread":    true,
 	"Twrite":   true,
 	"Rreaddir": true,
+	"Rgetattr": true,
 }
 
 func (g *Generator) Generate(r io.Reader, name string) error {

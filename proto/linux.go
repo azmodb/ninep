@@ -217,6 +217,8 @@ const (
 	GetAttrAll   = 0x00003fff
 )
 
+const rgetattrLen = 8 + 13 + 4 + 4 + 4 + 8 + 8 + 8 + 8 + 8 + 16 + 16 + 16 + 16 + 8 + 8
+
 // Rgetattr describes a file system object. The fields follow pretty
 // closely the fields returned by the Linux stat(2) system call.
 type Rgetattr struct {
@@ -224,25 +226,32 @@ type Rgetattr struct {
 	// response.
 	Valid uint64
 
-	Qid // 13 byte value representing a unique file system object
+	*unix.Stat_t
+}
 
-	Mode      Mode   // inode protection mode
-	Uid       uint32 // user-id of owner
-	Gid       uint32 // group-id of owner
-	Nlink     uint64 // number of hard links to the file
-	Rdev      uint64 // device type, for special file inode
-	Size      uint64 // file size, in bytes
-	BlockSize uint64 // optimal file sys I/O ops blocksize
-	Blocks    uint64
+// MessageType returns the message type.
+func (m Rgetattr) MessageType() MessageType { return MessageRgetattr }
 
-	Atime unix.Timespec // time of last access
-	Mtime unix.Timespec // time of last data modification
-	Ctime unix.Timespec // time of last file status change
+// Len returns the length of the message in bytes.
+func (m Rgetattr) Len() int { return rgetattrLen }
 
-	// Btime, Gen and DataVersion fields are reserved for future use.
-	Btime       unix.Timespec
-	Gen         uint64
-	DataVersion uint64
+// Reset resets all state.
+func (m *Rgetattr) Reset() { *m = Rgetattr{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rgetattr) Encode(buf *binary.Buffer) {
+	EncodeRgetattr(buf, m.Valid, m.Stat_t)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rgetattr) Decode(buf *binary.Buffer) {
+	DecodeRgetattr(buf, &m.Valid, m.Stat_t)
+}
+
+// IsDir reports whether m describes a directory. That is, it tests for
+// the ModeDir bit being set in m.
+func (m Rgetattr) IsDir() bool {
+	return m.Mode&unix.S_IFDIR != 0
 }
 
 // Tsetattr sets attributes of a file system object referenced by fid.

@@ -1,15 +1,14 @@
 package proto
 
 import (
+	"fmt"
+
 	"github.com/azmodb/ninep/binary"
 	"golang.org/x/sys/unix"
 )
 
-// EncodeRgetattr encodes information about a file system object. The
-// byte sequence follow pretty closely the fields returned by the Linux
-// stat(2) system call.
-//
-// Valid is a bitmask indicating which fields are valid in the response.
+// EncodeRgetattr encodes information about a file system object. Valid
+// is a bitmask indicating which fields are valid in the response.
 func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint64(valid)
 
@@ -17,7 +16,8 @@ func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 	buf.PutUint32(uint32(st.Mtim.Nano() ^ st.Size<<8))
 	buf.PutUint64(st.Ino)
 
-	buf.PutUint32(st.Mode)
+	mode := NewModeUnix(uint32(st.Mode))
+	buf.PutUint32(uint32(mode))
 	buf.PutUint32(st.Uid)
 	buf.PutUint32(st.Gid)
 	buf.PutUint64(st.Nlink)
@@ -38,32 +38,52 @@ func EncodeRgetattr(buf *binary.Buffer, valid uint64, st *unix.Stat_t) error {
 
 var btime = unix.NsecToTimespec(0)
 
-// UnixStatToRgetattr converts a unix.Stat_t returned by the stat(2)
-// system call.
-func UnixStatToRgetattr(st *unix.Stat_t) *Rgetattr {
-	return &Rgetattr{
-		Qid: Qid{
-			UnixFileTypeToQidType(st.Mode),
-			uint32(st.Mtim.Nano() ^ st.Size<<8),
-			st.Ino,
-		},
+// DecodeRgetattr decodes information about a file system object. Valid
+// is a bitmask indicating which fields are valid in the response.
+func DecodeRgetattr(buf *binary.Buffer, valid *uint64, st *unix.Stat_t) error {
+	*valid = buf.Uint64()
 
-		Mode:      Mode(st.Mode),
-		Uid:       st.Uid,
-		Gid:       st.Gid,
-		Nlink:     st.Nlink,
-		Rdev:      st.Rdev,
-		Size:      uint64(st.Size),
-		BlockSize: uint64(st.Blksize),
-		Blocks:    uint64(st.Blocks),
-		Atime:     st.Atim,
-		Mtime:     st.Mtim,
-		Ctime:     st.Ctim,
+	_ = buf.Uint8()  // qid directory type
+	_ = buf.Uint32() // qid version
+	st.Ino = buf.Uint64()
 
-		Btime:       btime,
-		Gen:         0,
-		DataVersion: 0,
-	}
+	st.Mode = NewUnixMode(Mode(buf.Uint32()))
+	st.Uid = buf.Uint32()
+	st.Gid = buf.Uint32()
+	st.Nlink = buf.Uint64()
+	st.Rdev = buf.Uint64()
+	st.Size = int64(buf.Uint64())
+	st.Blksize = int64(buf.Uint64())
+	st.Blocks = int64(buf.Uint64())
+	st.Atim = decodeTimespec(buf)
+	st.Mtim = decodeTimespec(buf)
+	st.Ctim = decodeTimespec(buf)
+
+	_ = decodeTimespec(buf)
+	_ = buf.Uint64()
+	_ = buf.Uint64() // DataVersion
+
+	return buf.Err()
+}
+
+func (m Rgetattr) String() string {
+	return fmt.Sprintf("valid:%d path:%d mode:%q uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d",
+		m.Valid,
+		m.Ino,
+		m.Mode,
+		m.Uid,
+		m.Gid,
+		m.Nlink,
+		m.Rdev,
+		m.Size,
+		m.Blksize,
+		m.Blocks,
+		m.Atim.Nano(),
+		m.Mtim.Nano(),
+		m.Ctim.Nano(),
+
+		0, 0, 0,
+	)
 }
 
 // EncodeRstatfs encodes information about a file system. The byte
