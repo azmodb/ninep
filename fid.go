@@ -19,14 +19,17 @@ type fileInfo struct {
 	iounit uint32
 }
 
-func (fi fileInfo) Mode() os.FileMode { return fi.Rgetattr.Mode.FileMode() }
-func (fi fileInfo) Name() string      { return path.Base(fi.path) }
-func (fi fileInfo) Size() int64       { return int64(fi.Rgetattr.Size) }
-func (fi fileInfo) Sys() interface{}  { return fi.Rgetattr }
-func (fi fileInfo) Iounit() uint32    { return fi.iounit }
+func (fi fileInfo) Size() int64      { return int64(fi.Rgetattr.Size) }
+func (fi fileInfo) Name() string     { return path.Base(fi.path) }
+func (fi fileInfo) Sys() interface{} { return fi.Rgetattr }
+func (fi fileInfo) Iounit() uint32   { return fi.iounit }
+
+func (fi fileInfo) Mode() os.FileMode {
+	return proto.Mode(fi.Rgetattr.Mode).FileMode()
+}
 
 func (fi fileInfo) ModTime() time.Time {
-	return time.Unix(fi.Mtime.Sec, fi.Mtime.Nsec)
+	return time.Unix(fi.Rgetattr.Mtim.Sec, fi.Rgetattr.Mtim.Nsec)
 }
 
 var (

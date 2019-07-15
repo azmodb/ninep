@@ -92,7 +92,7 @@ func checkFidIsFile(t *testing.T, f *Fid) {
 	t.Helper()
 
 	if f.fi.IsDir() {
-		t.Fatalf("fid: expected file fid, got %q", f.fi.Qid)
+		t.Fatalf("fid: expected file fid, got %+v", f.fi)
 	}
 }
 
