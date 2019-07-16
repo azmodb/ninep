@@ -67,7 +67,7 @@ func DecodeRgetattr(buf *binary.Buffer, valid *uint64, st *unix.Stat_t) error {
 }
 
 func (m Rgetattr) String() string {
-	return fmt.Sprintf("valid:%d path:%d mode:%q uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d",
+	return fmt.Sprintf("valid:%d path:%d mode:%d uid:%d gid:%d nlink:%d rdev:%d size:%d block_size:%d blocks:%d atime:%d mtime:%d ctime:%d btime:%d gen:%d data_version:%d",
 		m.Valid,
 		m.Ino,
 		m.Mode,
