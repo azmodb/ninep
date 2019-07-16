@@ -14,10 +14,11 @@ import (
 type service struct {
 	fs     posix.FileSystem
 	fidmap *fidmap
+	valid  uint64
 }
 
 func newService(fs posix.FileSystem) *service {
-	return &service{fs: fs, fidmap: newFidmap()}
+	return &service{fs: fs, fidmap: newFidmap(), valid: proto.GetAttrAll /* TODO */}
 }
 
 func (s *service) attach(ctx context.Context, tx *proto.Tlattach, rx *proto.Rlattach) unix.Errno {
@@ -46,9 +47,25 @@ func (s *service) attach(ctx context.Context, tx *proto.Tlattach, rx *proto.Rlat
 }
 
 func (s *service) auth(ctx context.Context, tx *proto.Tlauth, rx *proto.Rlauth) unix.Errno {
-	return unix.ENOTSUP
+	return unix.ENOSYS
 }
 
 func (s *service) flush(ctx context.Context, tx *proto.Tflush, rx *proto.Rflush) unix.Errno {
 	return unix.ENOTSUP
+}
+
+func (s *service) getattr(ctx context.Context, tx *proto.Tgetattr, rx *proto.Rgetattr) unix.Errno {
+	f, found := s.fidmap.Load(tx.Fid)
+	if !found {
+		return unix.EBADF
+	}
+	defer f.DecRef()
+
+	stat, err := f.Stat()
+	if err != nil {
+		return newErrno(err)
+	}
+	rx.Valid = s.valid
+	rx.Stat_t = stat
+	return 0
 }

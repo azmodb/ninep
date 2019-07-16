@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func init() { log.SetLevel(log.InfoLevel) } // verbose debug messages
+func init() { log.SetLevel(log.DebugLevel) } // verbose debug messages
 
 func testSessionHandshake(t *testing.T, num int, msize, want uint32) {
 	server, client := net.Pipe()

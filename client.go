@@ -161,7 +161,7 @@ func (c *Client) send(f *proto.Fcall) {
 	c.pending[tag] = f
 	c.mu.Unlock()
 
-	log.Debugf("<- %s tag:%d %s", f.Tx.MessageType(), tag, f.Tx)
+	//log.Debugf("<- %s tag:%d %s", f.Tx.MessageType(), tag, f.Tx)
 	c.writer.Lock()
 	if err := c.enc.Encode(tag, f.Tx); err != nil {
 		c.mu.Lock()
@@ -209,15 +209,19 @@ func (c *Client) recv() (err error) {
 			} else {
 				done(f, unix.Errno(rlerror.Errno))
 			}
-			log.Debugf("-> %s tag:%d %s", mtype, tag, rlerror)
+			//log.Debugf("-> %s tag:%d %s", mtype, tag, rlerror)
 		default:
+			// TODO(mason): this is way too hacky!
+			if f.Tx.MessageType() == proto.MessageTgetattr {
+				f.Rx.(*proto.Rgetattr).Stat_t = &unix.Stat_t{}
+			}
 			err = c.dec.Decode(f.Rx)
 			done(f, err)
-			if f.Rx == nil {
-				log.Debugf("-> %s tag:%d", mtype, tag)
-			} else {
-				log.Debugf("-> %s tag:%d %s", mtype, tag, f.Rx)
-			}
+			//if f.Rx == nil {
+			//log.Debugf("-> %s tag:%d", mtype, tag)
+			//} else {
+			//log.Debugf("-> %s tag:%d %s", mtype, tag, f.Rx)
+			//}
 		}
 	}
 

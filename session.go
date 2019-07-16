@@ -3,8 +3,8 @@ package ninep
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
+	"net"
 	"os"
 	"sync"
 
@@ -23,7 +23,8 @@ type session struct {
 	dec         *proto.Decoder
 	maxDataSize uint32
 
-	srv *service
+	addr string
+	srv  *service
 
 	mu       sync.Mutex // protects following
 	c        io.Closer
@@ -31,13 +32,14 @@ type session struct {
 	donec    chan struct{}
 }
 
-func newSession(fs posix.FileSystem, rwc io.ReadWriteCloser, msize, dsize uint32) *session {
+func newSession(fs posix.FileSystem, conn net.Conn, msize, dsize uint32) *session {
 	return &session{
-		enc:         proto.NewEncoder(rwc, msize),
-		dec:         proto.NewDecoder(rwc, msize),
-		c:           rwc,
+		enc:         proto.NewEncoder(conn, msize),
+		dec:         proto.NewDecoder(conn, msize),
+		c:           conn,
 		maxDataSize: dsize,
 
+		addr:  conn.RemoteAddr().String(),
 		srv:   newService(fs),
 		donec: make(chan struct{}),
 	}
@@ -58,13 +60,12 @@ func (s *session) Close() error {
 	return err
 }
 
-func (s *session) encode(tag uint16, m proto.Message) error {
+func (s *session) encode(tag uint16, m proto.Message) (err error) {
 	if s.encErr != nil {
-		err := s.encErr
+		err = s.encErr
 		return err
 	}
-	err := s.enc.Encode(tag, m)
-	if err != nil {
+	if err = s.enc.Encode(tag, m); err != nil {
 		s.encErr = err
 	}
 	return err
@@ -154,7 +155,7 @@ func (s *session) handshake() error {
 	if err = s.dec.Decode(tx); err != nil {
 		return err
 	}
-	log.Debugf("-> %s tag:%d %s", tx.MessageType(), tag, tx)
+	log.Debugf("-> [%s] %s tag:%d %s", s.addr, tx.MessageType(), tag, tx)
 
 	rx := fcall.Rx.(*proto.Rversion)
 	if err = s.tversion(tx, rx); err != nil {
@@ -165,7 +166,7 @@ func (s *session) handshake() error {
 		}
 		return err
 	}
-	log.Debugf("<- %s tag:%d %s", rx.MessageType(), tag, rx)
+	log.Debugf("<- [%s] %s tag:%d %s", s.addr, rx.MessageType(), tag, rx)
 	return s.encode(tag, rx)
 }
 
@@ -199,13 +200,13 @@ func (s *session) serve() (err error) {
 
 		wg.Add(1)
 		go func(ctx context.Context, fcall *proto.Fcall) {
-			log.Debugf("-> %s tag:%d %s", fcall.Tx.MessageType(), tag, fcall.Tx)
+			log.Debugf("-> [%s] %s tag:%d %s", s.addr, fcall.Tx.MessageType(), tag, fcall.Tx)
 			s.call(ctx, fcall)
-			log.Debugf("<- %s tag:%d %s", fcall.Rx.MessageType(), tag, fcall.Rx)
-			fmt.Printf("<- %s tag:%d %s\n", fcall.Rx.MessageType(), tag, fcall.Rx)
 			if fcall.Err != nil {
+				log.Debugf("<- [%s] %s tag:%d %v", s.addr, fcall.Rx.MessageType(), tag, fcall.Err)
 				s.rerror(tag, fcall.Err)
 			} else {
+				log.Debugf("<- [%s] %s tag:%d %s", s.addr, fcall.Rx.MessageType(), tag, fcall.Rx)
 				s.send(tag, fcall.Rx)
 			}
 			wg.Done()
@@ -217,15 +218,15 @@ func (s *session) serve() (err error) {
 	return err
 }
 
-func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
+func (s *session) call(ctx context.Context, f *proto.Fcall) {
 	var errno unix.Errno
-	switch fcall.Tx.MessageType() {
+	switch f.Tx.MessageType() {
 	case proto.MessageTlattach:
-		errno = s.srv.attach(ctx, fcall.Tx.(*proto.Tlattach), fcall.Rx.(*proto.Rlattach))
+		errno = s.srv.attach(ctx, f.Tx.(*proto.Tlattach), f.Rx.(*proto.Rlattach))
 	case proto.MessageTlauth:
-		errno = s.srv.auth(ctx, fcall.Tx.(*proto.Tlauth), fcall.Rx.(*proto.Rlauth))
+		errno = s.srv.auth(ctx, f.Tx.(*proto.Tlauth), f.Rx.(*proto.Rlauth))
 	case proto.MessageTflush:
-		errno = s.srv.flush(ctx, fcall.Tx.(*proto.Tflush), fcall.Rx.(*proto.Rflush))
+		errno = s.srv.flush(ctx, f.Tx.(*proto.Tflush), f.Rx.(*proto.Rflush))
 
 	case proto.MessageTwalk:
 	case proto.MessageTread:
@@ -241,7 +242,7 @@ func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
 	case proto.MessageTrename:
 	case proto.MessageTreadlink:
 	case proto.MessageTgetattr:
-		errno = unix.ENOTSUP
+		errno = s.srv.getattr(ctx, f.Tx.(*proto.Tgetattr), f.Rx.(*proto.Rgetattr))
 	case proto.MessageTsetattr:
 	case proto.MessageTxattrwalk:
 	case proto.MessageTxattrcreate:
@@ -255,6 +256,6 @@ func (s *session) call(ctx context.Context, fcall *proto.Fcall) {
 	case proto.MessageTunlinkat:
 	}
 	if errno != 0 {
-		fcall.Err = errno
+		f.Err = errno
 	}
 }
