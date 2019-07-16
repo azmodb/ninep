@@ -121,7 +121,6 @@ func testHandshake(t *testing.T, num int, addr string) {
 	}
 }
 
-/*
 func testAttach(t *testing.T, num int, addr string) {
 	t.Parallel()
 
@@ -140,7 +139,6 @@ func testAttach(t *testing.T, num int, addr string) {
 
 	checkFidIsDir(t, f)
 }
-*/
 
 func TestCompat(t *testing.T) {
 	s := newTestServer(t, testServerAddr)
@@ -148,7 +146,7 @@ func TestCompat(t *testing.T) {
 
 	for num, addr := range []string{testServerAddr /*, diodTestServer*/} {
 		testHandshake(t, num, addr)
-		// testAttach(t, num, addr)
+		testAttach(t, num, addr)
 	}
 }
 
