@@ -229,31 +229,54 @@ func (s *session) call(ctx context.Context, f *proto.Fcall) {
 		errno = s.srv.flush(ctx, f.Tx.(*proto.Tflush), f.Rx.(*proto.Rflush))
 
 	case proto.MessageTwalk:
+		errno = s.srv.walk(ctx, f.Tx.(*proto.Twalk), f.Rx.(*proto.Rwalk))
 	case proto.MessageTread:
+		errno = s.srv.read(ctx, f.Tx.(*proto.Tread), f.Rx.(*proto.Rread))
 	case proto.MessageTwrite:
+		errno = s.srv.write(ctx, f.Tx.(*proto.Twrite), f.Rx.(*proto.Rwrite))
 	case proto.MessageTclunk:
+		errno = s.srv.clunk(ctx, f.Tx.(*proto.Tclunk), f.Rx.(*proto.Rclunk))
 	case proto.MessageTremove:
+		errno = s.srv.remove(ctx, f.Tx.(*proto.Tremove), f.Rx.(*proto.Rremove))
 
 	case proto.MessageTstatfs:
+		errno = s.srv.statfs(ctx, f.Tx.(*proto.Tstatfs), f.Rx.(*proto.Rstatfs))
 	case proto.MessageTlopen:
+		errno = s.srv.open(ctx, f.Tx.(*proto.Tlopen), f.Rx.(*proto.Rlopen))
 	case proto.MessageTcreate:
+		errno = s.srv.create(ctx, f.Tx.(*proto.Tlcreate), f.Rx.(*proto.Rlcreate))
 	case proto.MessageTsymlink:
+		errno = s.srv.symlink(ctx, f.Tx.(*proto.Tsymlink), f.Rx.(*proto.Rsymlink))
 	case proto.MessageTmknod:
+		errno = s.srv.mknod(ctx, f.Tx.(*proto.Tmknod), f.Rx.(*proto.Rmknod))
 	case proto.MessageTrename:
+		errno = s.srv.rename(ctx, f.Tx.(*proto.Trename), f.Rx.(*proto.Rrename))
 	case proto.MessageTreadlink:
+		errno = s.srv.readlink(ctx, f.Tx.(*proto.Treadlink), f.Rx.(*proto.Rreadlink))
 	case proto.MessageTgetattr:
 		errno = s.srv.getattr(ctx, f.Tx.(*proto.Tgetattr), f.Rx.(*proto.Rgetattr))
 	case proto.MessageTsetattr:
+		errno = s.srv.setattr(ctx, f.Tx.(*proto.Tsetattr), f.Rx.(*proto.Rsetattr))
 	case proto.MessageTxattrwalk:
+		errno = s.srv.xattrwalk(ctx, f.Tx.(*proto.Txattrwalk), f.Rx.(*proto.Rxattrwalk))
 	case proto.MessageTxattrcreate:
+		errno = s.srv.xattrcreate(ctx, f.Tx.(*proto.Txattrcreate), f.Rx.(*proto.Rxattrcreate))
 	case proto.MessageTreaddir:
+		errno = s.srv.readdir(ctx, f.Tx.(*proto.Treaddir), f.Rx.(*proto.Rreaddir))
 	case proto.MessageTfsync:
+		errno = s.srv.fsync(ctx, f.Tx.(*proto.Tfsync), f.Rx.(*proto.Rfsync))
 	case proto.MessageTlock:
+		errno = s.srv.lock(ctx, f.Tx.(*proto.Tlock), f.Rx.(*proto.Rlock))
 	case proto.MessageTgetlock:
+		errno = s.srv.getlock(ctx, f.Tx.(*proto.Tgetlock), f.Rx.(*proto.Rgetlock))
 	case proto.MessageTlink:
+		errno = s.srv.link(ctx, f.Tx.(*proto.Tlink), f.Rx.(*proto.Rlink))
 	case proto.MessageTmkdir:
+		errno = s.srv.mkdir(ctx, f.Tx.(*proto.Tmkdir), f.Rx.(*proto.Rmkdir))
 	case proto.MessageTrenameat:
+		errno = s.srv.renameat(ctx, f.Tx.(*proto.Trenameat), f.Rx.(*proto.Rrenameat))
 	case proto.MessageTunlinkat:
+		errno = s.srv.unlinkat(ctx, f.Tx.(*proto.Tunlinkat), f.Rx.(*proto.Runlinkat))
 	}
 	if errno != 0 {
 		f.Err = errno
