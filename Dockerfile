@@ -19,4 +19,4 @@ EXPOSE 5640
 VOLUME /export
 
 ENTRYPOINT ["/bin/ninepd"]
-CMD ["addr", ":5640", "-export", "/export"]
+CMD ["-addr", ":5640", "-export", "/export"]
