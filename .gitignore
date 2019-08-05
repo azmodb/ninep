@@ -1,3 +1,5 @@
+cmd/ninepd/ninepd
+
 .DS_Store
 *.orig
 c.out
