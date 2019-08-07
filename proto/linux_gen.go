@@ -160,46 +160,6 @@ func (m *Tstatfs) Decode(buf *binary.Buffer) {
 }
 
 // MessageType returns the message type.
-func (m Rstatfs) MessageType() MessageType { return MessageRstatfs }
-
-// String implements fmt.Stringer.
-func (m Rstatfs) String() string {
-	return fmt.Sprintf("type:%d block_size:%d blocks:%d blocks_free:%d blocks_available:%d files:%d files_free:%d fs_id:%d name_length:%d", m.Type, m.BlockSize, m.Blocks, m.BlocksFree, m.BlocksAvailable, m.Files, m.FilesFree, m.FsID, m.NameLength)
-}
-
-// Len returns the length of the message in bytes.
-func (m Rstatfs) Len() int { return 4 + 4 + 8 + 8 + 8 + 8 + 8 + 8 + 4 }
-
-// Reset resets all state.
-func (m *Rstatfs) Reset() { *m = Rstatfs{} }
-
-// Encode encodes to the given binary.Buffer.
-func (m Rstatfs) Encode(buf *binary.Buffer) {
-	buf.PutUint32(m.Type)
-	buf.PutUint32(m.BlockSize)
-	buf.PutUint64(m.Blocks)
-	buf.PutUint64(m.BlocksFree)
-	buf.PutUint64(m.BlocksAvailable)
-	buf.PutUint64(m.Files)
-	buf.PutUint64(m.FilesFree)
-	buf.PutUint64(m.FsID)
-	buf.PutUint32(m.NameLength)
-}
-
-// Decode decodes from the given binary.Buffer.
-func (m *Rstatfs) Decode(buf *binary.Buffer) {
-	m.Type = buf.Uint32()
-	m.BlockSize = buf.Uint32()
-	m.Blocks = buf.Uint64()
-	m.BlocksFree = buf.Uint64()
-	m.BlocksAvailable = buf.Uint64()
-	m.Files = buf.Uint64()
-	m.FilesFree = buf.Uint64()
-	m.FsID = buf.Uint64()
-	m.NameLength = buf.Uint32()
-}
-
-// MessageType returns the message type.
 func (m Tlopen) MessageType() MessageType { return MessageTlopen }
 
 // String implements fmt.Stringer.

@@ -98,10 +98,41 @@ func EncodeRstatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
 	buf.PutUint64(st.Bavail)
 	buf.PutUint64(st.Files)
 	buf.PutUint64(st.Ffree)
-	buf.PutUint64(uint64(st.Fsid.Val[0] | st.Fsid.Val[1]<<32))
+	buf.PutUint64(uint64(st.Fsid.Val[0]) | uint64(st.Fsid.Val[1])<<32)
 	buf.PutUint32(255)
 
 	return buf.Err()
+}
+
+// DecodeRstatfs decodes information about a file system.
+func DecodeRstatfs(buf *binary.Buffer, st *unix.Statfs_t) error {
+	st.Type = buf.Uint32()
+	st.Bsize = buf.Uint32()
+	st.Blocks = buf.Uint64()
+	st.Bfree = buf.Uint64()
+	st.Bavail = buf.Uint64()
+	st.Files = buf.Uint64()
+	st.Ffree = buf.Uint64()
+	v := buf.Uint64()
+	st.Fsid.Val[0] = int32(v)
+	st.Fsid.Val[1] = int32(v >> 32)
+	_ = buf.Uint32()
+
+	return buf.Err()
+}
+
+func (m *Rstatfs) String() string {
+	return fmt.Sprintf("type:%d bsize:%d blocks:%d bfree:%d bavail:%d files:%d ffree:%d fsid:%.16x namelen:%d",
+		m.Statfs_t.Type,
+		m.Statfs_t.Bsize,
+		m.Statfs_t.Blocks,
+		m.Statfs_t.Bfree,
+		m.Statfs_t.Bavail,
+		m.Statfs_t.Files,
+		m.Statfs_t.Ffree,
+		uint64(m.Statfs_t.Fsid.Val[0])|uint64(m.Statfs_t.Fsid.Val[1])<<32,
+		255,
+	)
 }
 
 // StatToQid converts an unix.Stat_t.

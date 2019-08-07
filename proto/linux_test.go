@@ -18,8 +18,6 @@ var generatedLinuxPackets = []packet{
 	{&Rlerror{Errno: math.MaxUint32}, &Rlerror{}},
 	{&Tstatfs{}, &Tstatfs{}},
 	{&Tstatfs{Fid: math.MaxUint32}, &Tstatfs{}},
-	{&Rstatfs{}, &Rstatfs{}},
-	{&Rstatfs{Type: math.MaxUint32, BlockSize: math.MaxUint32, Blocks: math.MaxUint64, BlocksFree: math.MaxUint64, BlocksAvailable: math.MaxUint64, Files: math.MaxUint64, FilesFree: math.MaxUint64, FsID: math.MaxUint64, NameLength: math.MaxUint32}, &Rstatfs{}},
 	{&Tlopen{}, &Tlopen{}},
 	{&Tlopen{Fid: math.MaxUint32, Flags: math.MaxUint32}, &Tlopen{}},
 	{&Rlopen{}, &Rlopen{}},
