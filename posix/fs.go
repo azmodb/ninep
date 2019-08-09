@@ -38,11 +38,15 @@ type FileSystem interface {
 type File interface {
 	WriteAt(p []byte, offset int64) (int, error)
 	ReadAt(p []byte, offset int64) (int, error)
+	ReadDir() ([]Record, error)
 	Close() error
 }
 
 // Stat describes a file system object.
 type Stat = unix.Stat_t
+
+// StatFS describes a file system.
+type StatFS = unix.Statfs_t
 
 type posixFS struct {
 	root string
@@ -232,6 +236,19 @@ func (fs *posixFS) Stat(path string) (*Stat, error) {
 	return stat, nil
 }
 
+func (fs *posixFS) StatFS(path string) (*StatFS, error) {
+	path, ok := chroot(fs.root, path)
+	if !ok {
+		return nil, unix.EPERM
+	}
+
+	statfs := &unix.Statfs_t{}
+	if err := unix.Statfs(path, statfs); err != nil {
+		return nil, &os.PathError{Op: "statfs", Path: path, Err: err}
+	}
+	return statfs, nil
+}
+
 func (f *posixFile) WriteAt(p []byte, offset int64) (int, error) {
 	if f == nil || f.f == nil {
 		return 0, unix.EBADF
@@ -244,6 +261,13 @@ func (f *posixFile) ReadAt(p []byte, offset int64) (int, error) {
 		return 0, unix.EBADF
 	}
 	return f.f.ReadAt(p, offset)
+}
+
+func (f *posixFile) ReadDir() ([]Record, error) {
+	if f == nil || f.f == nil {
+		return nil, unix.EBADF
+	}
+	return readDir(int(f.f.Fd()))
 }
 
 func (f *posixFile) Close() error { return f.f.Close() }
