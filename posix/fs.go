@@ -25,6 +25,7 @@ type FileSystem interface {
 	Open(path string, flags int, uid, gid int) (File, error)
 	Remove(path string, uid, gid int) error
 
+	StatFS(path string) (*StatFS, error)
 	Stat(path string) (*Stat, error)
 
 	Lookup(username string, uid int) (gid int, err error)
