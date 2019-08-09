@@ -54,6 +54,21 @@ func (f *Fid) isOpened() bool { return f.file != nil }
 //	return nil
 //}
 
+func (f *Fid) Walk(names []string, walkfn func(*Stat) error) (*Fid, error) {
+	path := f.path
+	for _, name := range names {
+		path = join(path, name)
+		stat, err := f.fs.Stat(path)
+		if err != nil {
+			return nil, err
+		}
+		if err = walkfn(stat); err != nil {
+			return nil, err
+		}
+	}
+	return newFid(f.fs, path, f.uid, f.gid)
+}
+
 // Create creates a regular file name in directory represented by fid
 // and prepares it for I/O. After the call fid represents the new file.
 //
@@ -109,6 +124,9 @@ func (f *Fid) Remove() error {
 // Stat returns a Stat describing the named file.
 func (f *Fid) Stat() (*Stat, error) { return f.fs.Stat(f.path) }
 
+// StatFS returns file system statistics.
+func (f *Fid) StatFS() (*StatFS, error) { return f.fs.StatFS(f.path) }
+
 // Close closes the fid, rendering it unusable for I/O.
 func (f *Fid) Close() error {
 	if !f.isOpened() {
@@ -118,4 +136,48 @@ func (f *Fid) Close() error {
 	err := f.file.Close()
 	f.file = nil
 	return err
+}
+
+func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
+	if !f.isOpened() {
+		return 0, unix.EBADF
+	}
+	return f.file.ReadAt(p, offset)
+}
+
+func (f *Fid) WriteAt(p []byte, offset int64) (int, error) {
+	if !f.isOpened() {
+		return 0, unix.EBADF
+	}
+	return f.file.WriteAt(p, offset)
+}
+
+// ReadDir returns directory entries from the directory represented by
+// fid. Offset is the offset returned in the last directory entry of
+// the previous call.
+func (f *Fid) ReadDir(p []byte, offset int64) (n int, err error) {
+	if !f.isOpened() {
+		return 0, unix.EBADF
+	}
+
+	records, err := f.file.ReadDir() /// TODO(mason): cache
+	if err != nil {
+		return 0, err
+	}
+	if offset >= int64(len(records)) {
+		return 0, unix.EIO
+	}
+
+	for _, rec := range records[offset:] {
+		if len(p[n:]) < rec.Len() {
+			break
+		}
+
+		m, err := rec.MarshalTo(p[n:])
+		n += m
+		if err != nil {
+			break
+		}
+	}
+	return n, err
 }
