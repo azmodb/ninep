@@ -82,18 +82,34 @@ type Tstatfs struct {
 	Fid uint32
 }
 
+const rstatfsLen = 4 + 4 + 8 + 8 + 8 + 8 + 8 + 8 + 4
+
 // Rstatfs response corresponds to the fields returned by the statfs(2)
 // system call.
 type Rstatfs struct {
-	Type            uint32
-	BlockSize       uint32
-	Blocks          uint64
-	BlocksFree      uint64
-	BlocksAvailable uint64
-	Files           uint64
-	FilesFree       uint64
-	FsID            uint64
-	NameLength      uint32
+	*unix.Statfs_t
+}
+
+// MessageType returns the message type.
+func (m Rstatfs) MessageType() MessageType { return MessageRstatfs }
+
+// Len returns the length of the message in bytes.
+func (m Rstatfs) Len() int { return rstatfsLen }
+
+// Reset resets all state.
+func (m *Rstatfs) Reset() { *m = Rstatfs{} }
+
+// Encode encodes to the given binary.Buffer.
+func (m Rstatfs) Encode(buf *binary.Buffer) {
+	EncodeRstatfs(buf, m.Statfs_t)
+}
+
+// Decode decodes from the given binary.Buffer.
+func (m *Rstatfs) Decode(buf *binary.Buffer) {
+	if m.Statfs_t == nil {
+		m.Statfs_t = &unix.Statfs_t{}
+	}
+	DecodeRstatfs(buf, m.Statfs_t)
 }
 
 // Tlopen prepares fid for file I/O. Flags contains Linux open(2) flags
@@ -240,11 +256,17 @@ func (m *Rgetattr) Reset() { *m = Rgetattr{} }
 
 // Encode encodes to the given binary.Buffer.
 func (m Rgetattr) Encode(buf *binary.Buffer) {
+	if m.Stat_t == nil { // TODO(mason)
+		m.Stat_t = &unix.Stat_t{}
+	}
 	EncodeRgetattr(buf, m.Valid, m.Stat_t)
 }
 
 // Decode decodes from the given binary.Buffer.
 func (m *Rgetattr) Decode(buf *binary.Buffer) {
+	if m.Stat_t == nil { // TODO(mason)
+		m.Stat_t = &unix.Stat_t{}
+	}
 	DecodeRgetattr(buf, &m.Valid, m.Stat_t)
 }
 

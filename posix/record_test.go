@@ -13,7 +13,7 @@ func checkRecords(t *testing.T, records []Record, num int, want map[string]uint8
 		t.Fatalf("ReadDir: expected %d records, got %d", num, len(records))
 	}
 
-	for _, rec := range records {
+	for i, rec := range records {
 		typ, found := want[rec.Name]
 		if !found {
 			t.Fatalf("ReadDir: found unexpected name %q", rec.Name)
@@ -22,9 +22,9 @@ func checkRecords(t *testing.T, records []Record, num int, want map[string]uint8
 			t.Fatalf("ReadDir: expected dirent type %d, got %d", rec.Type, typ)
 		}
 
-		//if rec.Offset != uint64(i+1) {
-		//	t.Fatalf("ReadDir: expected offset %d, got %d", i+1, rec.Offset)
-		//}
+		if rec.Offset != uint64(i+1) {
+			t.Fatalf("ReadDir: expected offset %d, got %d", i+1, rec.Offset)
+		}
 	}
 }
 
@@ -52,53 +52,3 @@ func TestReadDir(t *testing.T) {
 
 	checkRecords(t, records, len(expectedRecords), expectedRecords)
 }
-
-/*
-func mustOpen(t *testing.T, name string) *os.File {
-	f, err := os.Open(name)
-	if err != nil {
-		t.Fatalf("mustOpen: %v", err)
-	}
-	return f
-}
-
-func TestReadDirFull(t *testing.T) {
-	dir := &File{f: mustOpen(t, filepath.Join("testdata", "dirent"))}
-	defer dir.Close()
-
-	records, err := dir.ReadDir(0)
-	if err != nil {
-		t.Errorf("ReadDir: unexpected error: %v", err)
-	}
-
-	checkRecords(t, records, len(expectedRecords), expectedRecords)
-}
-
-func TestReadDirOffset(t *testing.T) {
-	dir := &File{f: mustOpen(t, filepath.Join("testdata", "dirent"))}
-	defer dir.Close()
-
-	for _, test := range []struct {
-		offset int64
-
-		err error
-	}{
-		{0, nil},
-		{1, nil},
-		{2, nil},
-		{3, nil},
-		{4, nil},
-		{5, nil},
-		{6, nil},
-		{7, io.EOF},
-	} {
-		records, err := dir.ReadDir(test.offset)
-		if err != test.err {
-			t.Errorf("ReadDir: unexpected error: %v", err)
-		}
-
-		want := len(expectedRecords) - int(test.offset)
-		checkRecords(t, records, want, expectedRecords)
-	}
-}
-*/
