@@ -1,6 +1,8 @@
 package posix
 
 import (
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -18,10 +20,9 @@ func testMalformedWalkPath(t *testing.T, f *Fid, names []string) {
 	}
 }
 
-func openWalkRoot(t *testing.T) *Fid {
+func openWalkRoot(t *testing.T, dir string) *Fid {
 	t.Helper()
 
-	dir := filepath.Join("testdata", "walk")
 	fs, err := newPosixFS(dir, -1, -1)
 	if err != nil {
 		log.Panicf("walk: cannot init posix filesystem: %v", err)
@@ -36,7 +37,8 @@ func openWalkRoot(t *testing.T) *Fid {
 }
 
 func TestMalformedWalkPath(t *testing.T) {
-	root := openWalkRoot(t)
+	dir := filepath.Join("testdata", "walk")
+	root := openWalkRoot(t, dir)
 	defer root.Close()
 
 	testMalformedWalkPath(t, root, []string{"a", "b", "c", "X"})
@@ -49,7 +51,8 @@ func TestMalformedWalkPath(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-	root := openWalkRoot(t)
+	dir := filepath.Join("testdata", "walk")
+	root := openWalkRoot(t, dir)
 	defer root.Close()
 
 	names := []string{"a", "b", "c", "file"}
@@ -86,5 +89,50 @@ func TestFidAttach(t *testing.T) {
 
 	if err = f.Close(); err != unix.EBADF {
 		t.Fatalf("fid: expected %v, got %v", unix.EBADF, err)
+	}
+}
+
+func TestFidReadDir(t *testing.T) {
+	want := map[string]bool{
+		".":     true,
+		"..":    true,
+		"dir1":  true,
+		"file1": true,
+		"file2": true,
+		"file3": true,
+		"file4": true,
+	}
+	dir := filepath.Join("testdata", "dirent")
+	root := openWalkRoot(t, dir)
+	defer root.Close()
+
+	root.Open(os.O_RDONLY)
+
+	data := make([]byte, 64)
+	var records []Record
+	var offset int64
+	for {
+		n, err := root.ReadDir(data, offset)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("readdir: read failed: %v", err)
+		}
+
+		r, err := UnmarshalRecords(data[:n])
+		if err != nil {
+			log.Fatalf("readdir: unmarshal failed: %v", err)
+		}
+		offset = int64(r[len(r)-1].Offset)
+		records = append(records, r...)
+	}
+	if len(records) != len(want) {
+		log.Fatalf("readir: exepcted entries %v, got %v", len(want), len(records))
+	}
+	for _, rec := range records {
+		if _, found := want[rec.Name]; !found {
+			log.Fatalf("readdir: found unexpected name %q", rec.Name)
+		}
 	}
 }

@@ -4,8 +4,10 @@ package posix
 
 import (
 	"encoding/binary"
+	"io"
 	"unsafe"
 
+	"github.com/azmodb/ninep/proto"
 	"golang.org/x/sys/unix"
 )
 
@@ -16,6 +18,72 @@ type Record struct {
 	Offset uint64
 	Type   uint8
 	Name   string
+}
+
+// FixedRecordLen is the length of all fixed-width fields in a
+// Record.
+const FixedRecordLen = 24
+
+// Len returns the length of the encoded record in bytes.
+func (r Record) Len() int { return FixedRecordLen + len(r.Name) }
+
+// MarshalTo encode to the given buffer.
+func (r Record) MarshalTo(buf []byte) (int, error) {
+	if len(buf) < FixedRecordLen+len(r.Name) {
+		return 0, io.ErrUnexpectedEOF
+	}
+
+	buf[0] = proto.UnixDirTypeToQidType(r.Type)
+	binary.LittleEndian.PutUint32(buf[1:5], 0)
+	binary.LittleEndian.PutUint64(buf[5:13], r.Ino)
+
+	binary.LittleEndian.PutUint64(buf[13:21], r.Offset)
+	buf[21] = r.Type
+	binary.LittleEndian.PutUint16(buf[22:24], uint16(len(r.Name)))
+	return FixedRecordLen + copy(buf[24:], r.Name), nil
+}
+
+// Unmarshal decodes from the given buffer.
+func (r *Record) Unmarshal(buf []byte) (int, error) {
+	if len(buf) < FixedRecordLen {
+		return 0, io.ErrUnexpectedEOF
+	}
+
+	r.Type = buf[0]
+	_ = binary.LittleEndian.Uint32(buf[1:5])
+	r.Ino = binary.LittleEndian.Uint64(buf[5:13])
+
+	r.Offset = binary.LittleEndian.Uint64(buf[13:21])
+	r.Type = buf[21]
+	n := int(binary.LittleEndian.Uint16(buf[22:24]))
+	n += FixedRecordLen
+	if len(buf) < n {
+		return 0, io.ErrUnexpectedEOF
+	}
+	r.Name = string(buf[FixedRecordLen:n])
+
+	return n, nil
+}
+
+// Records represents a platform independent directory entries.
+type Records []Record
+
+// UnmarshalRecords decodes platform independent directory entries from
+// the given buffer.
+func UnmarshalRecords(buf []byte) (r Records, err error) {
+	for {
+		rec := Record{}
+		n, err := rec.Unmarshal(buf)
+		if err == io.ErrUnexpectedEOF {
+			break
+		}
+		if err != nil {
+			break
+		}
+		buf = buf[n:]
+		r = append(r, rec)
+	}
+	return r, err
 }
 
 const direntBlockSize = 4 * 1024

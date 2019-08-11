@@ -267,6 +267,11 @@ func (f *posixFile) ReadDir() ([]Record, error) {
 	if f == nil || f.f == nil {
 		return nil, unix.EBADF
 	}
+
+	// reset read offset
+	if _, err := f.f.Seek(0, 0); err != nil {
+		return nil, err
+	}
 	return readDir(int(f.f.Fd()))
 }
 

@@ -1,6 +1,7 @@
 package posix
 
 import (
+	"io"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -8,7 +9,7 @@ import (
 
 // Attach introduces a new user to the file system, and establishes a fid
 // as the root for that user on the file tree selected by export. If uid
-// is not set to proto.NoUid (~0), is the uid of the user and is used in
+// is not set to no uid (~0), is the uid of the user and is used in
 // preference to username.
 func Attach(fs FileSystem, file File, path, username string, uid int, opts ...Option) (*Fid, error) {
 	if _, err := fs.Stat(path); err != nil {
@@ -54,7 +55,10 @@ func (f *Fid) isOpened() bool { return f.file != nil }
 //	return nil
 //}
 
-func (f *Fid) Walk(names []string, walkfn func(*Stat) error) (*Fid, error) {
+// Walk is used to descend a directory represented by fid using
+// successive path elements provided in the names slice, calling fn for
+// each file or directory in the tree.
+func (f *Fid) Walk(names []string, fn func(*Stat) error) (*Fid, error) {
 	path := f.path
 	for _, name := range names {
 		path = join(path, name)
@@ -62,7 +66,7 @@ func (f *Fid) Walk(names []string, walkfn func(*Stat) error) (*Fid, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = walkfn(stat); err != nil {
+		if err = fn(stat); err != nil {
 			return nil, err
 		}
 	}
@@ -138,6 +142,8 @@ func (f *Fid) Close() error {
 	return err
 }
 
+// ReadAt reads len(b) bytes from the fid starting at byte offset. It
+// returns the number of bytes read and the error, if any.
 func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
 	if !f.isOpened() {
 		return 0, unix.EBADF
@@ -145,6 +151,8 @@ func (f *Fid) ReadAt(p []byte, offset int64) (int, error) {
 	return f.file.ReadAt(p, offset)
 }
 
+// WriteAt writes len(b) bytes to the fid starting at byte offset. It
+// returns the number of bytes written and an error, if any.
 func (f *Fid) WriteAt(p []byte, offset int64) (int, error) {
 	if !f.isOpened() {
 		return 0, unix.EBADF
@@ -165,7 +173,7 @@ func (f *Fid) ReadDir(p []byte, offset int64) (n int, err error) {
 		return 0, err
 	}
 	if offset >= int64(len(records)) {
-		return 0, unix.EIO
+		return 0, io.EOF
 	}
 
 	for _, rec := range records[offset:] {
